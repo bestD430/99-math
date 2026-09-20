@@ -776,14 +776,15 @@ function getKmbStopsMap(callback) {
 }
 
 function getMtrStopsData(callback) {
-    if (mtrStopsCache) {
-        callback(mtrStopsCache, mtrRouteNamesCache);
+    if (mtrStopsCache && Object.keys(mtrStopsCache).length > 0) {
+        callback(mtrStopsCache, mtrRouteNamesCache || {});
         return;
     }
 
     function parseStopsCsv(csvText) {
         mtrStopsCache = {};
         mtrStopIdToName = {};
+        if (!csvText) return;
         var lines = csvText.split(/\r?\n/);
         for (var i = 1; i < lines.length; i++) {
             var line = lines[i].trim();
@@ -795,7 +796,7 @@ function getMtrStopsData(callback) {
             var seq = parseInt(parts[2], 10) || 0;
             var stationId = parts[3].trim();
             var nameChi = parts[6].trim();
-            if (!nameChi) continue;
+            if (!nameChi || !stationId) continue;
 
             mtrStopIdToName[stationId] = nameChi;
 
@@ -820,7 +821,9 @@ function getMtrStopsData(callback) {
             if (parts.length < 3) continue;
             var routeId = parts[0].replace(/^\uFEFF/, '').trim();
             var nameChi = parts[1].trim();
-            if (!mtrRouteNamesCache[routeId]) mtrRouteNamesCache[routeId] = nameChi;
+            if (routeId && nameChi && !mtrRouteNamesCache[routeId]) {
+                mtrRouteNamesCache[routeId] = nameChi;
+            }
         }
     }
 
@@ -831,21 +834,30 @@ function getMtrStopsData(callback) {
         });
     }
 
-    tryFetch('https://opendata.mtr.com.hk/data/mtr_bus_stops.csv')
-        .catch(function() {
-            console.warn('MTR stops CSV direct failed, trying proxy…');
-            return tryFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://opendata.mtr.com.hk/data/mtr_bus_stops.csv'));
-        })
+    var stopsUrl = 'https://opendata.mtr.com.hk/data/mtr_bus_stops.csv';
+    var routesUrl = 'https://opendata.mtr.com.hk/data/mtr_bus_routes.csv';
+    var proxies = [
+        function(u) { return u; },
+        function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
+        function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); }
+    ];
+
+    function fetchWithFallbacks(url, proxyIndex) {
+        proxyIndex = proxyIndex || 0;
+        if (proxyIndex >= proxies.length) return Promise.reject(new Error('All proxies failed'));
+        return tryFetch(proxies[proxyIndex](url)).catch(function() {
+            return fetchWithFallbacks(url, proxyIndex + 1);
+        });
+    }
+
+    fetchWithFallbacks(stopsUrl)
         .then(function(csvText) {
             parseStopsCsv(csvText);
-            return tryFetch('https://opendata.mtr.com.hk/data/mtr_bus_routes.csv')
-                .catch(function() {
-                    return tryFetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://opendata.mtr.com.hk/data/mtr_bus_routes.csv'));
-                });
+            return fetchWithFallbacks(routesUrl).catch(function() { return ''; });
         })
         .then(function(csvText) {
             parseRoutesCsv(csvText || '');
-            callback(mtrStopsCache, mtrRouteNamesCache);
+            callback(mtrStopsCache || {}, mtrRouteNamesCache || {});
         })
         .catch(function(err) {
             console.warn('MTR CSV completely failed, will use ETA fallback', err);
@@ -853,6 +865,13 @@ function getMtrStopsData(callback) {
             mtrRouteNamesCache = mtrRouteNamesCache || {};
             callback(mtrStopsCache, mtrRouteNamesCache);
         });
+}
+
+function resolveMtrStopName(stopId) {
+    if (!stopId) return stopId;
+    if (mtrStopIdToName && mtrStopIdToName[stopId]) return mtrStopIdToName[stopId];
+    if (/[\u4e00-\u9fff]/.test(stopId)) return stopId;
+    return stopId;
 }
 
 function getMtrStopsFromEta(route, callback) {
@@ -871,7 +890,7 @@ function getMtrStopsFromEta(route, callback) {
                 if (!id || seen[id]) return;
                 seen[id] = true;
                 var dir = (id.indexOf('-U') !== -1) ? 'O' : (id.indexOf('-D') !== -1) ? 'I' : 'O';
-                var name = mtrStopIdToName[id] || id;
+                var name = resolveMtrStopName(id);
                 stops.push({
                     id: id,
                     name: name,
@@ -1600,10 +1619,25 @@ function updateDirectionOptions(index, isUserAction, callback) {
     } else if (company === 'mtr') {
         getMtrStopsData(function(stopsMap, routeNames) {
             var stops = stopsMap[route] || [];
+            var routeLabel = (routeNames && routeNames[route]) ? routeNames[route] : '';
+
+            function buildDirFromRouteName() {
+                if (routeLabel && routeLabel.indexOf('至') !== -1) {
+                    var p = routeLabel.split('至');
+                    if (p.length >= 2) {
+                        var fromName = p[0].trim();
+                        var toName = p.slice(1).join('至').trim();
+                        return '<option value="O">往 ' + escapeHtml(toName) + '</option>' +
+                               '<option value="I">往 ' + escapeHtml(fromName) + '</option>';
+                    }
+                }
+                var label = routeLabel || route;
+                return '<option value="O">往 ' + escapeHtml(label) + ' (去程)</option>' +
+                       '<option value="I">往 ' + escapeHtml(label) + ' (回程)</option>';
+            }
+
             if (stops.length === 0) {
-                dirSelect.innerHTML =
-                    '<option value="O">往 ' + escapeHtml(route) + ' (去程)</option>' +
-                    '<option value="I">往 ' + escapeHtml(route) + ' (回程)</option>';
+                dirSelect.innerHTML = buildDirFromRouteName();
                 if (currentDir === 'outbound') currentDir = 'O';
                 if (currentDir === 'inbound') currentDir = 'I';
                 finalizeDir(dirSelect, item, currentDir, isUserAction, destInput, callback);
@@ -1613,6 +1647,8 @@ function updateDirectionOptions(index, isUserAction, callback) {
             var lastO = null, lastI = null;
             for (var s = 0; s < stops.length; s++) {
                 var st = stops[s];
+                var stName = resolveMtrStopName(st.id) || st.name;
+                st = { id: st.id, name: stName, dir: st.dir, seq: st.seq };
                 if (st.dir === 'O') {
                     if (!lastO || st.seq > lastO.seq) lastO = st;
                 } else if (st.dir === 'I') {
@@ -1621,15 +1657,14 @@ function updateDirectionOptions(index, isUserAction, callback) {
             }
 
             var html = '';
-            if (lastO) {
+            if (lastO && lastO.name && /[\u4e00-\u9fff]/.test(lastO.name)) {
                 html += '<option value="O">往 ' + escapeHtml(lastO.name) + '</option>';
             }
-            if (lastI) {
+            if (lastI && lastI.name && /[\u4e00-\u9fff]/.test(lastI.name)) {
                 html += '<option value="I">往 ' + escapeHtml(lastI.name) + '</option>';
             }
             if (!html) {
-                var routeLabel = (routeNames && routeNames[route]) ? routeNames[route] : route;
-                html = '<option value="O">往 ' + escapeHtml(routeLabel) + '</option>';
+                html = buildDirFromRouteName();
             }
             dirSelect.innerHTML = html;
             if (currentDir === 'outbound') currentDir = 'O';
@@ -1802,39 +1837,40 @@ function loadStopOptions(index, resetStop) {
     } else if (company === 'mtr') {
         getMtrStopsData(function(stopsMap) {
             var allStops = stopsMap[route] || [];
-            if (allStops.length > 0) {
-                var filtered = allStops.filter(function(s) { return s.dir === dir; });
-                filtered.sort(function(a, b) { return a.seq - b.seq; });
+
+            function renderMtrStopList(list, forceAll) {
+                var filtered = forceAll ? list : list.filter(function(s) { return s.dir === dir; });
+                if (!forceAll) {
+                    filtered.sort(function(a, b) { return a.seq - b.seq; });
+                }
                 var html = '<option value="">請選擇車站...</option>';
                 for (var j = 0; j < filtered.length; j++) {
                     var code = filtered[j].id;
-                    var name = filtered[j].name;
+                    var name = resolveMtrStopName(code) || filtered[j].name || code;
+                    if (!/[\u4e00-\u9fff]/.test(name) && name === code) {
+                        name = code + '（站名載入中）';
+                    }
                     var selected = (String(code) === String(currentStop)) ? 'selected' : '';
                     html += '<option value="' + escapeHtml(code) + '" ' + selected + '>' + (j + 1) + '. ' + escapeHtml(name) + '</option>';
                 }
-                if (filtered.length === 0) html = '<option value="">此方向無車站資料</option>';
+                if (filtered.length === 0) {
+                    html = '<option value="">此方向無車站資料</option>';
+                }
                 stopSelect.innerHTML = html;
+            }
+
+            if (allStops.length > 0) {
+                renderMtrStopList(allStops, false);
             } else {
                 getMtrStopsFromEta(route, function(stops) {
                     var filtered = stops.filter(function(s) { return s.dir === dir; });
-                    var html = '<option value="">請選擇車站...</option>';
-                    for (var j = 0; j < filtered.length; j++) {
-                        var code = filtered[j].id;
-                        var name = filtered[j].name;
-                        var selected = (String(code) === String(currentStop)) ? 'selected' : '';
-                        html += '<option value="' + escapeHtml(code) + '" ' + selected + '>' + (j + 1) + '. ' + escapeHtml(name) + '</option>';
+                    if (filtered.length > 0) {
+                        renderMtrStopList(filtered, true);
+                    } else if (stops.length > 0) {
+                        renderMtrStopList(stops, true);
+                    } else {
+                        stopSelect.innerHTML = '<option value="">找不到此路線車站</option>';
                     }
-                    if (filtered.length === 0) {
-                        html = '<option value="">請選擇車站...</option>';
-                        for (var k = 0; k < stops.length; k++) {
-                            var code2 = stops[k].id;
-                            var name2 = stops[k].name;
-                            var selected2 = (String(code2) === String(currentStop)) ? 'selected' : '';
-                            html += '<option value="' + escapeHtml(code2) + '" ' + selected2 + '>' + (k + 1) + '. ' + escapeHtml(name2) + '</option>';
-                        }
-                        if (stops.length === 0) html = '<option value="">找不到此路線車站</option>';
-                    }
-                    stopSelect.innerHTML = html;
                 });
             }
         });
