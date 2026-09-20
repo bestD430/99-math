@@ -470,6 +470,10 @@
     .modal-footer { display: flex; justify-content: space-between; border-top: 1px solid #334155; padding-top: 12px; margin-top: 4px; }
     .action-btn { background: #0284c7; color: white; border: none; padding: 11px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
     .add-btn { background: #166534; color: #86efac; }
+    .gps-btn { background: #0d9488; color: #ffffff; width: 100%; font-size: 0.9rem; font-weight: bold; padding: 10px; border-radius: 8px; border: none; cursor: pointer; margin-bottom: 5px; }
+    .gps-btn:hover { background: #14b8a6; }
+    .gps-result-box { background: #0f172a; border: 1px dashed #0d9488; border-radius: 8px; padding: 10px; display: none; margin-bottom: 8px; flex-direction: column; gap: 8px; }
+    .gps-result-box select { width: 100%; background: #1e293b; color: #fff; padding: 8px; border-radius: 6px; border: 1px solid #0d9488; }
     .hint-text { font-size: 0.765rem; color: #94a3b8; }
 
     @media (min-width: 768px) and (max-width: 1024px) {
@@ -619,6 +623,15 @@
             <div class="modal-title">⚙️ 系統及路線設定</div>
             <button class="modal-close" onclick="closeSettings()">&times;</button>
         </div>
+
+        <!-- GPS 自動搜尋區域 -->
+        <button class="gps-btn" onclick="findNearbyStopsByGPS()">📍 使用 GPS 自動搜尋附近車站</button>
+        <div class="gps-result-box" id="gps-result-box">
+            <span style="font-size:0.85rem; color:#38bdf8; font-weight:bold;">📍 附近 500 米站點 (請選擇一項自動填入)：</span>
+            <select id="gps-stops-select"></select>
+            <button class="action-btn" style="padding: 6px 12px; font-size:0.8rem;" onclick="applyGpsSelectedStop()">一鍵新增此車站</button>
+        </div>
+
         <div class="night-time-section">
             <div class="night-time-title">🌙 夜間黑屏時間設定</div>
             <div class="night-time-inputs">
@@ -654,6 +667,7 @@
 
 <script>
 var kmbStopsCacheMap = null;
+var kmbStopsRawData = null;
 var nightWakeTimer = null;
 var isManuallyWoken = false;
 var currentBuses = [];
@@ -663,6 +677,7 @@ var mtrStopsCache = null;
 var mtrRouteNamesCache = null;
 var mtrStopIdToName = {};
 var gmbRouteCache = {};
+var gpsDiscoveredStops = [];
 
 function applyDisplaySettings(clockScale, busScale, cardPadding) {
     document.documentElement.style.setProperty('--clock-scale', clockScale || 1.0);
@@ -767,12 +782,96 @@ function getKmbStopsMap(callback) {
         .then(function(stopsData) {
             kmbStopsCacheMap = {};
             if (stopsData && stopsData.data) {
+                kmbStopsRawData = stopsData.data;
                 for (var i = 0; i < stopsData.data.length; i++) {
                     kmbStopsCacheMap[stopsData.data[i].stop] = stopsData.data[i].name_tc;
                 }
             }
             callback(kmbStopsCacheMap);
         }).catch(function() { callback({}); });
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    var R = 6371e3;
+    var rad = Math.PI / 180;
+    var dLat = (lat2 - lat1) * rad;
+    var dLon = (lon2 - lon1) * rad;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function findNearbyStopsByGPS() {
+    var resultBox = document.getElementById('gps-result-box');
+    var selectEl = document.getElementById('gps-stops-select');
+    if (!navigator.geolocation) {
+        alert('您的瀏覽器不支援 GPS 定位功能');
+        return;
+    }
+    
+    resultBox.style.display = 'flex';
+    selectEl.innerHTML = '<option>📍 正在取得 GPS 位置並計算距離...</option>';
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var userLat = pos.coords.latitude;
+        var userLng = pos.coords.longitude;
+
+        getKmbStopsMap(function() {
+            if (!kmbStopsRawData) {
+                selectEl.innerHTML = '<option>無法載入車站數據</option>';
+                return;
+            }
+            gpsDiscoveredStops = [];
+            for (var i = 0; i < kmbStopsRawData.length; i++) {
+                var s = kmbStopsRawData[i];
+                var dist = calculateDistance(userLat, userLng, parseFloat(s.lat), parseFloat(s.long));
+                if (dist <= 800) {
+                    gpsDiscoveredStops.push({
+                        stopId: s.stop,
+                        name: s.name_tc,
+                        dist: Math.round(dist)
+                    });
+                }
+            }
+            gpsDiscoveredStops.sort(function(a, b) { return a.dist - b.dist; });
+
+            if (gpsDiscoveredStops.length === 0) {
+                selectEl.innerHTML = '<option>800 米內找不到任何九巴/龍運車站</option>';
+            } else {
+                var html = '';
+                var limit = Math.min(gpsDiscoveredStops.length, 15);
+                for (var j = 0; j < limit; j++) {
+                    var item = gpsDiscoveredStops[j];
+                    html += '<option value="' + j + '">' + escapeHtml(item.name) + ' (' + item.dist + '米)</option>';
+                }
+                selectEl.innerHTML = html;
+            }
+        });
+    }, function(err) {
+        alert('GPS 定位失敗，請確保存取權限已開啟');
+        resultBox.style.display = 'none';
+    }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function applyGpsSelectedStop() {
+    var selectEl = document.getElementById('gps-stops-select');
+    var idx = selectEl.value;
+    if (idx === "" || !gpsDiscoveredStops[idx]) return;
+    var targetStop = gpsDiscoveredStops[idx];
+    
+    currentBuses.push({
+        company: 'kmb',
+        route: '',
+        dir: 'outbound',
+        stop: targetStop.stopId,
+        origin_name: targetStop.name,
+        dest_name: '',
+        offset: 0
+    });
+    renderSettingsList();
+    alert('已成功自動建立車站！請手動補全「路線號碼」並選擇方向。');
 }
 
 function getMtrStopsData(callback) {
@@ -1419,6 +1518,67 @@ function closeSettings() {
     if (modal) modal.classList.remove('active');
 }
 
+function addNewBusConfig() {
+    currentBuses.push({ company: 'kmb', route: '', dir: 'outbound', stop: '', origin_name: '', dest_name: '', offset: 0 });
+    renderSettingsList();
+}
+
+function deleteBusConfig(index) {
+    currentBuses.splice(index, 1);
+    renderSettingsList();
+}
+
+function saveBusConfig() {
+    var items = document.querySelectorAll('.config-item');
+    var updated = [];
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var company = item.querySelector('.bus-company').value;
+        var routeInput = item.querySelector('.bus-route');
+        var route = routeInput ? routeInput.value.trim().toUpperCase() : '';
+        var dirSelect = item.querySelector('.bus-dir');
+        var dir = dirSelect ? dirSelect.value : 'outbound';
+        var stopSelect = item.querySelector('.bus-stop');
+        var stop = stopSelect ? stopSelect.value : '';
+        var originName = item.querySelector('.bus-origin').value.trim();
+        var destName = item.querySelector('.bus-dest').value.trim();
+        var offsetSelect = item.querySelector('.bus-offset');
+        var offset = offsetSelect ? parseFloat(offsetSelect.value) : 0;
+        var regionEl = item.querySelector('.gmb-region');
+        var region = regionEl ? regionEl.value : 'NT';
+        var gmbRouteId = item.getAttribute('data-gmb-route-id') || '';
+
+        var obj = {
+            company: company,
+            route: route,
+            dir: dir,
+            stop: stop,
+            origin_name: originName,
+            dest_name: destName,
+            offset: offset
+        };
+        if (company === 'gmb') {
+            obj.region = region;
+            obj.gmb_route_id = gmbRouteId;
+        }
+        if (company === 'nlb') {
+            obj.nlb_route_id = dir;
+        }
+        updated.push(obj);
+    }
+    
+    currentBuses = updated;
+    localStorage.setItem('user_bus_configs_v16', JSON.stringify(currentBuses));
+    localStorage.setItem('night_mode_start', document.getElementById('night-start-time').value);
+    localStorage.setItem('night_mode_end', document.getElementById('night-end-time').value);
+    localStorage.setItem('user_clock_scale', document.getElementById('clock-scale-range').value);
+    localStorage.setItem('user_bus_scale', document.getElementById('bus-scale-range').value);
+    localStorage.setItem('user_card_padding', document.getElementById('card-height-range').value);
+
+    closeSettings();
+    fetchBusData();
+}
+
 function renderSettingsList() {
     var container = document.getElementById('config-list');
     if (!container) return;
@@ -1789,15 +1949,15 @@ function loadStopOptions(index, resetStop) {
                     var list = data.data || [];
                     var html = '<option value="">請選擇車站...</option>';
                     for (var i = 0; i < list.length; i++) {
-                        var code = list[i].stop;
-                        var name = stopsMap[code] || ('車站 ' + code);
-                        var selected = (code === currentStop) ? 'selected' : '';
-                        html += '<option value="' + escapeHtml(code) + '" ' + selected + '>' + (i + 1) + '. ' + escapeHtml(name) + '</option>';
+                        var stCode = list[i].stop;
+                        var stName = stopsMap[stCode] || stCode;
+                        var sel = String(stCode) === String(currentStop) ? 'selected' : '';
+                        html += '<option value="' + escapeHtml(stCode) + '" ' + sel + '>' + (i + 1) + '. ' + escapeHtml(stName) + '</option>';
                     }
                     stopSelect.innerHTML = html;
                 })
                 .catch(function() {
-                    stopSelect.innerHTML = '<option value="">載入車站失敗</option>';
+                    stopSelect.innerHTML = '<option value="">無法載入車站</option>';
                 });
         });
     } else if (company === 'ctb') {
@@ -1811,36 +1971,32 @@ function loadStopOptions(index, resetStop) {
                     return;
                 }
                 var html = '<option value="">請選擇車站...</option>';
-                var completed = 0;
-                var stopItems = new Array(list.length);
-
+                var fetchPromises = [];
                 for (var i = 0; i < list.length; i++) {
-                    (function(idx) {
-                        var stopCode = list[idx].stop;
-                        fetch('https://rt.data.gov.hk/v2/transport/citybus/stop/' + stopCode)
-                            .then(function(res) { return res.json(); })
-                            .then(function(sData) {
-                                var sName = (sData.data && sData.data.name_tc) ? sData.data.name_tc : ('車站 ' + stopCode);
-                                var selected = (stopCode === currentStop) ? 'selected' : '';
-                                stopItems[idx] = '<option value="' + escapeHtml(stopCode) + '" ' + selected + '>' + (idx + 1) + '. ' + escapeHtml(sName) + '</option>';
-                                completed++;
-                                if (completed === list.length) {
-                                    stopSelect.innerHTML = html + stopItems.join('');
-                                }
+                    (function(seq, stCode) {
+                        var p = fetch('https://rt.data.gov.hk/v2/transport/citybus/stop/' + stCode)
+                            .then(function(r) { return r.json(); })
+                            .then(function(sd) {
+                                return { seq: seq, stop: stCode, name: (sd.data && sd.data.name_tc) ? sd.data.name_tc : stCode };
                             })
                             .catch(function() {
-                                var selected = (stopCode === currentStop) ? 'selected' : '';
-                                stopItems[idx] = '<option value="' + escapeHtml(stopCode) + '" ' + selected + '>' + (idx + 1) + '. 車站 ' + escapeHtml(stopCode) + '</option>';
-                                completed++;
-                                if (completed === list.length) {
-                                    stopSelect.innerHTML = html + stopItems.join('');
-                                }
+                                return { seq: seq, stop: stCode, name: stCode };
                             });
-                    })(i);
+                        fetchPromises.push(p);
+                    })(i + 1, list[i].stop);
                 }
+                Promise.all(fetchPromises).then(function(results) {
+                    results.sort(function(a, b) { return a.seq - b.seq; });
+                    for (var k = 0; k < results.length; k++) {
+                        var itemObj = results[k];
+                        var sel = String(itemObj.stop) === String(currentStop) ? 'selected' : '';
+                        html += '<option value="' + escapeHtml(itemObj.stop) + '" ' + sel + '>' + itemObj.seq + '. ' + escapeHtml(itemObj.name) + '</option>';
+                    }
+                    stopSelect.innerHTML = html;
+                });
             })
             .catch(function() {
-                stopSelect.innerHTML = '<option value="">載入車站失敗</option>';
+                stopSelect.innerHTML = '<option value="">無法載入車站</option>';
             });
     } else if (company === 'nlb') {
         getNLBStops(dir, function(stops) {
@@ -1850,153 +2006,71 @@ function loadStopOptions(index, resetStop) {
             }
             var html = '<option value="">請選擇車站...</option>';
             for (var i = 0; i < stops.length; i++) {
-                var s = stops[i];
-                var code = s.stopId;
-                var name = s.stopName_c || s.stopName_tc || s.stopName_e || ('車站 ' + code);
-                var selected = (String(code) === String(currentStop)) ? 'selected' : '';
-                html += '<option value="' + escapeHtml(code) + '" ' + selected + '>' + (i + 1) + '. ' + escapeHtml(name) + '</option>';
+                var st = stops[i];
+                var sel = String(st.stopId) === String(currentStop) ? 'selected' : '';
+                html += '<option value="' + escapeHtml(st.stopId) + '" ' + sel + '>' + (i + 1) + '. ' + escapeHtml(st.stopName_c || st.stopName_tc || st.stopName_e) + '</option>';
             }
             stopSelect.innerHTML = html;
         });
     } else if (company === 'mtr') {
-        function renderMtrStopsList(stops) {
-            var targetDir = dir || 'O';
-            var filtered = [];
-            for (var i = 0; i < stops.length; i++) {
-                if (!stops[i].dir || stops[i].dir === targetDir) {
-                    filtered.push(stops[i]);
-                }
-            }
-            if (filtered.length === 0) filtered = stops;
-
-            filtered.sort(function(a, b) { return (a.seq || 0) - (b.seq || 0); });
-
-            var html = '<option value="">請選擇車站...</option>';
-            for (var j = 0; j < filtered.length; j++) {
-                var s = filtered[j];
-                var code = s.id;
-                var name = resolveMtrStopName(code) || s.name || ('車站 ' + code);
-                var selected = (String(code) === String(currentStop)) ? 'selected' : '';
-                html += '<option value="' + escapeHtml(code) + '" ' + selected + '>' + (j + 1) + '. ' + escapeHtml(name) + '</option>';
-            }
-            stopSelect.innerHTML = html;
-        }
-
         getMtrStopsData(function(stopsMap) {
             var stops = stopsMap[route] || [];
-            if (stops.length > 0) {
-                renderMtrStopsList(stops);
+            var targetDir = dir || 'O';
+            var filtered = [];
+
+            for (var s = 0; s < stops.length; s++) {
+                if (!stops[s].dir || stops[s].dir === targetDir) {
+                    filtered.push(stops[s]);
+                }
+            }
+            filtered.sort(function(a, b) { return (a.seq || 0) - (b.seq || 0); });
+
+            function renderMtrList(list) {
+                if (!list || list.length === 0) {
+                    stopSelect.innerHTML = '<option value="">無車站資料</option>';
+                    return;
+                }
+                var html = '<option value="">請選擇車站...</option>';
+                for (var i = 0; i < list.length; i++) {
+                    var st = list[i];
+                    var stName = resolveMtrStopName(st.id) || st.name;
+                    var sel = String(st.id) === String(currentStop) ? 'selected' : '';
+                    html += '<option value="' + escapeHtml(st.id) + '" ' + sel + '>' + (i + 1) + '. ' + escapeHtml(stName) + '</option>';
+                }
+                stopSelect.innerHTML = html;
+            }
+
+            if (filtered.length > 0) {
+                renderMtrList(filtered);
             } else {
                 getMtrStopsFromEta(route, function(etaStops) {
-                    if (etaStops.length > 0) {
-                        renderMtrStopsList(etaStops);
-                    } else {
-                        stopSelect.innerHTML = '<option value="">無車站資料</option>';
+                    var etaFiltered = [];
+                    for (var e = 0; e < etaStops.length; e++) {
+                        if (!etaStops[e].dir || etaStops[e].dir === targetDir) {
+                            etaFiltered.push(etaStops[e]);
+                        }
                     }
+                    renderMtrList(etaFiltered.length > 0 ? etaFiltered : etaStops);
                 });
             }
         });
     } else if (company === 'gmb') {
-        var gmbRouteId = item.getAttribute('data-gmb-route-id');
-        if (!gmbRouteId) {
-            stopSelect.innerHTML = '<option value="">請先選擇方向...</option>';
-            return;
-        }
+        var gmbRouteId = item.getAttribute('data-gmb-route-id') || '';
         getGMBStops(gmbRouteId, dir, function(stops) {
             if (!stops || stops.length === 0) {
                 stopSelect.innerHTML = '<option value="">無車站資料</option>';
                 return;
             }
-            stops.sort(function(a, b) { return (a.stop_seq || 0) - (b.stop_seq || 0); });
             var html = '<option value="">請選擇車站...</option>';
             for (var i = 0; i < stops.length; i++) {
-                var s = stops[i];
-                var seq = s.stop_seq;
-                var name = s.name_tc || s.name_en || ('車站 ' + seq);
-                var selected = (String(seq) === String(currentStop)) ? 'selected' : '';
-                html += '<option value="' + escapeHtml(seq) + '" ' + selected + '>' + seq + '. ' + escapeHtml(name) + '</option>';
+                var st = stops[i];
+                var name = st.name_tc || st.name_en || ('車站 ' + st.stop_seq);
+                var sel = String(st.stop_seq) === String(currentStop) ? 'selected' : '';
+                html += '<option value="' + escapeHtml(String(st.stop_seq)) + '" ' + sel + '>' + st.stop_seq + '. ' + escapeHtml(name) + '</option>';
             }
             stopSelect.innerHTML = html;
         });
     }
-}
-
-function addNewBusConfig() {
-    currentBuses.push({
-        company: 'kmb',
-        route: '',
-        dir: 'outbound',
-        stop: '',
-        origin_name: '',
-        dest_name: '',
-        offset: 0
-    });
-    renderSettingsList();
-}
-
-function deleteBusConfig(index) {
-    currentBuses.splice(index, 1);
-    renderSettingsList();
-}
-
-function saveBusConfig() {
-    var items = document.querySelectorAll('.config-item');
-    var newBuses = [];
-
-    for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        var company = item.querySelector('.bus-company').value;
-        var routeInput = item.querySelector('.bus-route');
-        var route = routeInput ? routeInput.value.trim().toUpperCase() : '';
-        var dir = item.querySelector('.bus-dir').value;
-        var stopSelect = item.querySelector('.bus-stop');
-        var stop = stopSelect.value || item.getAttribute('data-current-stop') || '';
-        var originName = item.querySelector('.bus-origin').value.trim();
-        var destName = item.querySelector('.bus-dest').value.trim();
-        var offset = parseFloat(item.querySelector('.bus-offset').value || 0);
-
-        var configObj = {
-            company: company,
-            route: route,
-            dir: dir,
-            stop: stop,
-            origin_name: originName,
-            dest_name: destName,
-            offset: offset
-        };
-
-        if (company === 'gmb') {
-            var regionEl = item.querySelector('.gmb-region');
-            configObj.region = regionEl ? regionEl.value : 'NT';
-            configObj.gmb_route_id = item.getAttribute('data-gmb-route-id') || '';
-        } else if (company === 'nlb') {
-            configObj.nlb_route_id = dir;
-        }
-
-        newBuses.push(configObj);
-    }
-
-    currentBuses = newBuses;
-    localStorage.setItem('user_bus_configs_v16', JSON.stringify(currentBuses));
-
-    var startTime = document.getElementById('night-start-time').value;
-    var endTime = document.getElementById('night-end-time').value;
-    localStorage.setItem('night_mode_start', startTime);
-    localStorage.setItem('night_mode_end', endTime);
-
-    var clockScale = document.getElementById('clock-scale-range').value;
-    var busScale = document.getElementById('bus-scale-range').value;
-    var cardPadding = document.getElementById('card-height-range').value;
-
-    localStorage.setItem('user_clock_scale', clockScale);
-    localStorage.setItem('user_bus_scale', busScale);
-    localStorage.setItem('user_card_padding', cardPadding);
-
-    applyDisplaySettings(clockScale, busScale, cardPadding);
-
-    closeSettings();
-    cachedRawEtas = {};
-    fetchBusData();
 }
 </script>
 </body>
