@@ -1,597 +1,1199 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>乘法冒險</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>99乘法大挑戰 · 完整介面</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
-      background: #faf6ef;
-      color: #1e293b;
-      min-height: 100dvh;
-      padding: 0;
-      overflow-x: hidden;
+    :root {
+      --bg: #f8f4eb;
+      --card: #ffffff;
+      --card-completed: #e8f5e9;
+      --card-review: #f0f7ff;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --accent: #27ae60;
+      --border: #e0dcd3;
+      --line: #d4cfc4;
     }
-    .app {
-      max-width: 430px;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #e8e4db;
+      color: var(--text);
+      line-height: 1.45;
+      padding: 16px 12px 60px;
+    }
+
+    /* ===== 導覽列 ===== */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .top-nav a {
+      display: inline-block;
+      padding: 8px 14px;
+      background: #f8f4eb;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .top-nav a:hover {
+      background: #f4d03f;
+    }
+
+    h2.section-title {
+      text-align: center;
+      font-size: 1.15rem;
+      color: #444;
+      margin: 40px 0 16px;
+      font-weight: 700;
+    }
+
+    /* ===== Phone frame ===== */
+    .phone {
+      max-width: 390px;
+      margin: 0 auto 30px;
+      background: var(--bg);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+      border: 1px solid #ddd;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .status-bar .icons { font-size: 0.75rem; }
+
+    /* ===== 關卡地圖樣式 ===== */
+    .map-body {
+      padding: 20px 16px 40px;
+      max-width: 520px;
       margin: 0 auto;
-      min-height: 100dvh;
-      background: #faf6ef;
+      background: var(--bg);
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+
+    .map-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .map-header h1 {
+      font-size: 1.45rem;
+      font-weight: 700;
+    }
+
+    .map-header p {
+      margin-top: 6px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .path {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    .path::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 12px;
+      bottom: 12px;
+      width: 2px;
+      background: var(--line);
+    }
+
+    .level {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .level-dot {
+      position: absolute;
+      left: -36px;
+      top: 18px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      z-index: 1;
+    }
+
+    .level.completed .level-dot {
+      background: #27ae60;
+      border-color: #27ae60;
+      color: white;
+    }
+
+    .level.review .level-dot {
+      background: #3498db;
+      border-color: #3498db;
+      color: white;
+    }
+
+    .level.final .level-dot {
+      background: #f39c12;
+      border-color: #f39c12;
+      color: white;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid var(--border);
+    }
+
+    .level.completed .card {
+      background: var(--card-completed);
+      border-color: #c8e6c9;
+    }
+
+    .level.review .card {
+      background: var(--card-review);
+      border-color: #bbdefb;
+    }
+
+    .level.final .card {
+      background: #fff8e1;
+      border-color: #ffe082;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .card-status {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #e8f5e9;
+      color: #27ae60;
+    }
+
+    .card-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .card-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .map-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ===== 首頁樣式 ===== */
+    .home {
+      padding: 8px 18px 28px;
+    }
+
+    .home .sub {
+      font-size: 0.85rem;
+      color: #5d8a6a;
+      margin-bottom: 4px;
+    }
+
+    .home h1 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 2px;
+    }
+
+    .home .desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .adventure-card {
+      background: #fef9c3;
+      border-radius: 20px;
+      padding: 18px 16px 16px;
+    }
+
+    .adventure-card .next {
+      font-size: 0.8rem;
+      color: #7a6a20;
+      margin-bottom: 4px;
+    }
+
+    .adventure-card h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .adventure-card p {
+      font-size: 0.88rem;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .step {
+      flex: 1;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 6px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: #2d6a4f;
+      font-weight: 600;
+    }
+
+    .step span {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 2px;
+    }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .bar {
+      height: 6px;
+      background: #e8e0a8;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 3.5%;
+      background: #27ae60;
+      border-radius: 3px;
+    }
+
+    .current {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      background: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .map-link {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 0.9rem;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .section .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .menu-item {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .menu-item .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .menu-item .text strong {
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    .menu-item .text span {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ===== 完成 / 獎勵 ===== */
+    .complete {
+      padding: 40px 24px 36px;
+      text-align: center;
+    }
+
+    .complete .badge, .reward .badge {
+      width: 64px;
+      height: 64px;
+      background: #27ae60;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 1.8rem;
+      color: white;
+    }
+
+    .complete h2, .reward h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .complete p, .reward .sub {
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .btn-outline {
+      background: #fff;
+      border: 1.5px solid #c8e0f0;
+      color: var(--text);
+    }
+
+    .btn-yellow {
+      background: #f4d03f;
+      color: #333;
+    }
+
+    .btn-white {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      text-align: left;
+      padding-left: 18px;
       position: relative;
     }
-    .screen { display: none; padding: 12px 16px 32px; }
-    .screen.active { display: block; }
 
-    .top {
+    .btn-white::after {
+      content: "›";
+      position: absolute;
+      right: 18px;
+      font-size: 1.3rem;
+      color: #aaa;
+    }
+
+    .link-row {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 0 4px;
+    }
+
+    /* ===== 練習題 ===== */
+    .quiz {
+      padding: 12px 16px 24px;
+    }
+
+    .quiz-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+
+    .quiz-top .progress-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .quiz-card {
+      background: #1e3a5f;
+      border-radius: 20px;
+      padding: 20px 16px 18px;
+      color: white;
+      text-align: center;
+    }
+
+    .quiz-card .ask {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .quiz-card .equation {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .quiz-card .speaker {
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .labels {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .labels span {
+      background: rgba(255,255,255,0.12);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+
+    .blocks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .block-group {
+      display: flex;
+      gap: 3px;
+      background: rgba(255,255,255,0.08);
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .block {
+      width: 18px;
+      height: 18px;
+      background: #5dade2;
+      border-radius: 4px;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      background: #d5f5e3;
+      border-radius: 14px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 4px 8px;
-      position: sticky;
-      top: 0;
-      background: #faf6ef;
-      z-index: 20;
+      font-weight: 700;
+      color: #1e8449;
     }
-    .btn-circle {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      border: none;
+
+    .feedback .stamp {
+      background: #27ae60;
+      color: white;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .choices {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .choice {
+      flex: 1;
       background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-    }
-    .title { font-size: 17px; font-weight: 700; }
-
-    .hero {
-      background: linear-gradient(145deg, #fef9c3, #fde68a);
-      border-radius: 22px;
-      padding: 22px 18px;
-      margin: 8px 0 20px;
-      position: relative;
-    }
-    .hero h1 { font-size: 26px; font-weight: 800; margin: 4px 0 8px; }
-    .hero p { font-size: 14px; color: #475569; line-height: 1.55; margin-bottom: 16px; }
-    .steps {
-      display: flex; gap: 8px; margin-bottom: 18px;
-    }
-    .step {
-      flex: 1; background: rgba(255,255,255,0.75);
-      border-radius: 14px; padding: 12px 4px;
-      text-align: center; font-size: 12px; font-weight: 600;
-    }
-    .step .ico { font-size: 22px; display: block; margin-bottom: 4px; }
-    .btn-main {
-      width: 100%; background: #1e293b; color: #fff;
-      border: none; border-radius: 16px; padding: 16px;
-      font-size: 17px; font-weight: 700; cursor: pointer;
-    }
-    .btn-main:active { opacity: 0.9; transform: scale(0.98); }
-
-    .sec-title { font-size: 15px; font-weight: 700; margin: 18px 0 10px; }
-    .menu {
-      background: #fff; border-radius: 16px;
-      padding: 16px; margin-bottom: 10px;
-      display: flex; align-items: center; gap: 14px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-      cursor: pointer;
-    }
-    .menu:active { transform: scale(0.98); }
-    .menu-ico {
-      width: 46px; height: 46px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; flex-shrink: 0;
-    }
-    .menu h3 { font-size: 15px; font-weight: 700; }
-    .menu p { font-size: 12px; color: #64748b; margin-top: 2px; }
-
-    .prog {
-      background: #fff; border-radius: 14px;
-      padding: 12px 14px; margin-bottom: 14px;
-      display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      font-size: 13px; font-weight: 600; color: #64748b;
-    }
-    .prog-bar {
-      flex: 1; height: 7px; background: #e2e8f0;
-      border-radius: 4px; overflow: hidden;
-    }
-    .prog-fill {
-      height: 100%; background: #3b82f6;
-      border-radius: 4px; transition: width 0.35s;
+      border: 1.5px solid #ddd;
+      border-radius: 12px;
+      padding: 14px 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      text-align: center;
     }
 
-    .qcard {
-      background: #1e3a5f; border-radius: 22px;
-      padding: 22px 16px; color: #fff; text-align: center;
-      margin-bottom: 18px;
-    }
-    .qcard .hint { font-size: 14px; opacity: 0.9; margin-bottom: 12px; }
-    .eq { font-size: 40px; font-weight: 800; letter-spacing: 1px; margin-bottom: 14px; }
-    .tags { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tag {
-      background: rgba(255,255,255,0.18);
-      border-radius: 20px; padding: 6px 14px; font-size: 13px;
-    }
-    .blocks {
-      display: flex; flex-wrap: wrap; justify-content: center;
-      gap: 10px; margin-top: 8px;
-    }
-    .group {
-      display: flex; flex-wrap: wrap; gap: 5px;
-      background: rgba(255,255,255,0.12);
-      border-radius: 12px; padding: 8px;
-      max-width: 100%;
-    }
-    .block {
-      width: 24px; height: 24px;
-      background: #60a5fa; border-radius: 5px;
-      border: 2px solid #3b82f6;
-      box-shadow: 0 2px 0 #2563eb;
+    .hint-btn {
+      margin-top: 12px;
+      width: 100%;
+      background: #fff;
+      border: 1.5px solid #f5c6c6;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.95rem;
+      color: var(--text);
+      font-weight: 600;
+      text-align: center;
     }
 
-    .opts {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px; margin-bottom: 14px;
-    }
-    .opt {
-      background: #fff; border: 2px solid #e2e8f0;
-      border-radius: 16px; padding: 18px 0;
-      font-size: 26px; font-weight: 800;
-      cursor: pointer; color: #1e293b;
-    }
-    .opt:active { transform: scale(0.96); }
-    .opt.correct { background: #dcfce7; border-color: #22c55e; color: #166534; }
-    .opt.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
-    .opt:disabled { pointer-events: none; }
-
-    .btn-hint {
-      width: 100%; background: #fff; border: 1.5px solid #e2e8f0;
-      border-radius: 14px; padding: 15px; font-size: 15px;
-      font-weight: 600; color: #64748b; cursor: pointer;
+    .numpad {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
     }
 
-    .fb { text-align: center; padding: 28px 16px; display: none; }
-    .fb.show { display: block; }
-    .fb .emoji { font-size: 60px; margin-bottom: 10px; }
-    .fb h2 { font-size: 24px; margin-bottom: 6px; }
-    .fb p { color: #64748b; margin-bottom: 20px; font-size: 18px; }
-    .btn-next {
-      background: #3b82f6; color: #fff; border: none;
-      border-radius: 16px; padding: 16px 36px;
-      font-size: 17px; font-weight: 700; cursor: pointer;
-    }
-
-    .num-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 12px; margin: 16px 0 22px;
-    }
     .num {
-      aspect-ratio: 1; background: #fff; border: 2px solid #e2e8f0;
-      border-radius: 16px; font-size: 26px; font-weight: 800;
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; cursor: pointer; color: #1e293b;
-    }
-    .num small { font-size: 11px; font-weight: 600; color: #64748b; }
-    .num.locked { opacity: 0.45; }
-    .num:active:not(.locked) { background: #dbeafe; border-color: #3b82f6; }
-
-    .card {
-      background: #fff; border-radius: 18px; padding: 18px;
-      margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    }
-    .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-    .row:last-child { margin-bottom: 0; }
-    .muted { color: #64748b; }
-    .bold { font-weight: 700; }
-    .gstatus {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-      text-align: center; font-size: 13px;
-    }
-    .gstatus div {
-      background: #f8fafc; border-radius: 12px; padding: 12px 4px;
+      background: #fff;
+      border: 1.5px solid #ddd;
+      border-radius: 12px;
+      padding: 14px 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-align: center;
     }
 
-    .note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; }
+    .num.del {
+      border-color: #f5b7b1;
+      color: #c0392b;
+    }
+
+    .num.ok {
+      background: #f4d03f;
+      border-color: #f4d03f;
+    }
+
+    /* ===== 獎勵 ===== */
+    .reward {
+      padding: 30px 20px 28px;
+      text-align: center;
+      background: #f0f0f0;
+    }
+
+    .reward-card {
+      background: #fce4ec;
+      border-radius: 20px;
+      padding: 20px 16px;
+      margin-bottom: 16px;
+    }
+
+    .reward-card .congrats {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #c2185b;
+      margin-bottom: 12px;
+    }
+
+    .reward-card .star {
+      font-size: 2.4rem;
+      margin-bottom: 6px;
+    }
+
+    .reward-card .star-text {
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .reward-card .star-sub {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    .collect {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .collect-item {
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px 10px;
+      width: 110px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .collect-item .pic {
+      font-size: 2rem;
+      margin-bottom: 4px;
+    }
+
+    .collect-item .name {
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .collect-item .label {
+      font-size: 0.7rem;
+      color: #888;
+    }
+
+    .btn-pink {
+      background: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      width: 100%;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .nav .back {
+      width: 36px;
+      height: 36px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .nav .help {
+      width: 36px;
+      height: 36px;
+      background: #f4d03f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div id="home" class="screen active">
-      <div class="top">
-        <div style="width:42px"></div>
-        <div class="title">99乘法大挑戰</div>
-        <button class="btn-circle" id="btnHelpHome">?</button>
-      </div>
 
-      <div class="hero">
-        <div style="position:absolute;right:14px;top:14px;font-size:40px">☀️</div>
-        <div style="font-size:12px;color:#854d0e;margin-bottom:2px">第一次玩，從這裡開始</div>
-        <h1>乘法冒險</h1>
-        <p>從積木看懂乘法，走到九九挑戰。<br>跟著關卡走，每次學會一小步。</p>
-        <div class="steps">
-          <div class="step"><span class="ico">🧱</span>1 積木看懂</div>
-          <div class="step"><span class="ico">✏️</span>2 自己算算</div>
-          <div class="step"><span class="ico">🚩</span>3 闖關挑戰</div>
-        </div>
-        <button class="btn-main" id="btnStart">從第一關開始 →</button>
-      </div>
+  <!-- 導覽列 -->
+  <div class="top-nav">
+    <a href="#map">關卡地圖</a>
+    <a href="#home">首頁</a>
+    <a href="#complete">完成畫面</a>
+    <a href="#quiz1">看懂積木</a>
+    <a href="#quiz2">練一練</a>
+    <a href="#challenge">小挑戰</a>
+    <a href="#reward">獎勵畫面</a>
+  </div>
 
-      <div class="sec-title">加強練習</div>
-      <div class="menu" id="btnPractice">
-        <div class="menu-ico" style="background:#fee2e2">👆</div>
-        <div>
-          <h3>自選乘法練習</h3>
-          <p>自己選 2～9，練練想加強的乘法</p>
-        </div>
-      </div>
-      <div class="menu" id="btnQuick">
-        <div class="menu-ico" style="background:#dbeafe">🔄</div>
-        <div>
-          <h3>今天再想 3 個算式</h3>
-          <p>用短短一回合，把剛學到的再想一次</p>
-        </div>
-      </div>
-      <div class="menu" id="btnParent">
-        <div class="menu-ico" style="background:#f0fdf4">👨‍👧</div>
-        <div>
-          <h3>家長專區</h3>
-          <p>看看最近的學習進度</p>
-        </div>
-      </div>
-      <p class="note">×2 免費體驗 · 無廣告 · 可離線使用</p>
+  <!-- ========== 關卡地圖 ========== -->
+  <h2 class="section-title" id="map">關卡地圖 · 0～10 全部解鎖</h2>
+  <div class="map-body">
+    <div class="map-header">
+      <h1>乘法冒險 · 關卡地圖</h1>
+      <p>沿著路線，一站一站學懂</p>
     </div>
 
-    <div id="learn" class="screen">
-      <div class="top">
-        <button class="btn-circle" id="btnBackLearn">←</button>
-        <div class="title">看懂積木</div>
-        <button class="btn-circle" id="btnHelpLearn">?</button>
+    <div class="path">
+      <div class="level">
+        <div class="level-dot">1</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×0</div></div>
+          <div class="card-name">零空島</div>
+          <div class="card-desc">10 題隨機 ×0 · 任何數 ×0 = 0</div>
+        </div>
       </div>
 
-      <div class="prog">
-        <span id="progText">已完成 0 / 5</span>
-        <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-        <span id="groupLabel">每組 2 塊</span>
+      <div class="level">
+        <div class="level-dot">2</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×1</div></div>
+          <div class="card-name">單一木橋</div>
+          <div class="card-desc">10 題隨機 ×1 · 任何數 ×1 = 自己</div>
+        </div>
       </div>
 
-      <div id="questionArea">
-        <div class="qcard">
-          <div class="hint">想一想，積木一共有幾塊？</div>
-          <div class="eq" id="equation">2 × 2 = ?</div>
-          <div class="tags">
-            <span class="tag" id="tagA">每組 2 塊</span>
-            <span class="tag" id="tagB">共有 2 組</span>
+      <div class="level">
+        <div class="level-dot">3</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×10</div></div>
+          <div class="card-name">十倍火箭站</div>
+          <div class="card-desc">10 題隨機 ×10 · 後面加一個 0</div>
+        </div>
+      </div>
+
+      <div class="level review">
+        <div class="level-dot">↻</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">0・1・10 混合站</div></div>
+          <div class="card-name">混合回想</div>
+          <div class="card-desc">只混合已學過的 ×0、×1、×10 · 10 題</div>
+        </div>
+      </div>
+
+      <div class="level completed">
+        <div class="level-dot">✓</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">×2</div>
+            <div class="card-status">已完成</div>
           </div>
-          <div class="blocks" id="blocksArea"></div>
+          <div class="card-name">雙倍花園</div>
+          <div class="card-desc">已遇到 8 題 · 10 題隨機 ×2</div>
         </div>
-        <div class="opts" id="options"></div>
-        <button class="btn-hint" id="btnHint">💡 提示</button>
       </div>
 
-      <div class="fb" id="feedback">
-        <div class="emoji" id="fbEmoji">🎉</div>
-        <h2 id="fbTitle">太棒了！</h2>
-        <p id="fbMsg">2 × 2 = 4</p>
-        <button class="btn-next" id="btnNext">下一題 →</button>
+      <div class="level review">
+        <div class="level-dot">↻</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×2 回想站</div></div>
+          <div class="card-name">再想一次</div>
+          <div class="card-desc">再想一次 ×2，確認真的看懂了</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">7</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×3</div></div>
+          <div class="card-name">三角風車</div>
+          <div class="card-desc">10 題隨機 ×3</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">8</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×4</div></div>
+          <div class="card-name">方塊小鎮</div>
+          <div class="card-desc">10 題隨機 ×4</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">9</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×5</div></div>
+          <div class="card-name">五星月台</div>
+          <div class="card-desc">10 題隨機 ×5</div>
+        </div>
+      </div>
+
+      <div class="level review">
+        <div class="level-dot">↻</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">3 組乘法混合站</div></div>
+          <div class="card-name">混合回想</div>
+          <div class="card-desc">只混合已學過的 ×2、×3、×4、×5 · 10 題</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">11</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×6</div></div>
+          <div class="card-name">積木山丘</div>
+          <div class="card-desc">10 題隨機 ×6</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">12</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×7</div></div>
+          <div class="card-name">彩虹氣球站</div>
+          <div class="card-desc">10 題隨機 ×7</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">13</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×8</div></div>
+          <div class="card-name">八方星空</div>
+          <div class="card-desc">10 題隨機 ×8</div>
+        </div>
+      </div>
+
+      <div class="level">
+        <div class="level-dot">14</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">×9</div></div>
+          <div class="card-name">九九終點站</div>
+          <div class="card-desc">10 題隨機 ×9</div>
+        </div>
+      </div>
+
+      <div class="level final">
+        <div class="level-dot">🏆</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">0～10 最終挑戰</div></div>
+          <div class="card-name">九九乘法最終挑戰</div>
+          <div class="card-desc">把 ×0 到 ×10 全部混合完成 18 題</div>
+        </div>
       </div>
     </div>
 
-    <div id="practice" class="screen">
-      <div class="top">
-        <button class="btn-circle" id="btnBackPractice">←</button>
-        <div class="title">我想練乘法</div>
-        <div style="width:42px"></div>
-      </div>
-      <h2 style="font-size:20px;margin:10px 0 4px">今天想練哪個數字？</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:8px">選一個，玩 5 題</p>
-      <div class="num-grid" id="numGrid"></div>
-      <div class="menu" id="btnMixed">
-        <div class="menu-ico" style="background:#e0e7ff">🔀</div>
-        <div>
-          <h3>全部混合</h3>
-          <p>2～9 的乘法，玩 10 題</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="parent" class="screen">
-      <div class="top">
-        <button class="btn-circle" id="btnBackParent">←</button>
-        <div class="title">家長專區</div>
-        <div style="width:42px"></div>
-      </div>
-      <h2 style="font-size:18px;margin:8px 0 4px">學習摘要</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:14px">看看最近的學習與下一步</p>
-
-      <div class="card">
-        <div class="row"><span class="muted">今天完成題數</span><span class="bold" id="todayCount">0</span></div>
-        <div class="row"><span class="muted">累積答對</span><span class="bold" id="totalCorrect">0</span></div>
-        <div class="row"><span class="muted">目前進度</span><span class="bold">×2 進行中</span></div>
-      </div>
-      <div class="card">
-        <p style="font-size:14px;font-weight:600;margin-bottom:12px">各組狀態</p>
-        <div class="gstatus" id="groupStatus"></div>
-      </div>
-      <p class="note">資料僅存在此裝置，不會上傳</p>
+    <div class="map-footer">
+      每關固定 10 題 · 題目完全隨機、不按順序<br>
+      答錯不會失去已完成紀錄 · 混合站只出現已學過的乘法
     </div>
   </div>
 
-  <script>
-    (function () {
-      var questions = [];
-      var qIndex = 0;
-      var correctCount = 0;
-      var answered = false;
+  <!-- ========== 首頁 ========== -->
+  <h2 class="section-title" id="home">① 首頁 · 99乘法大挑戰</h2>
+  <div class="phone">
+    <div class="status-bar">
+      <span>08:11</span>
+      <div class="icons">LTE 18</div>
+    </div>
+    <div class="home">
+      <div class="sub">一步一步，學會九九乘法</div>
+      <h1>99乘法大挑戰</h1>
+      <div class="desc">跟著乘法冒險，一關一關學懂</div>
 
-      function $(id) { return document.getElementById(id); }
-      function storageGet(key, def) {
-        try {
-          var v = localStorage.getItem('mult_' + key);
-          return v !== null ? JSON.parse(v) : def;
-        } catch (e) { return def; }
-      }
-      function storageSet(key, val) {
-        try { localStorage.setItem('mult_' + key, JSON.stringify(val)); } catch (e) {}
-      }
+      <div class="adventure-card">
+        <div class="next">下一站，繼續你的冒險</div>
+        <h2>乘法冒險</h2>
+        <p>從積木看懂乘法，走到九九挑戰。<br>跟著關卡走，每次學會一小步。</p>
 
-      function showScreen(id) {
-        var screens = document.querySelectorAll('.screen');
-        for (var i = 0; i < screens.length; i++) {
-          screens[i].classList.remove('active');
-        }
-        var el = $(id);
-        if (el) el.classList.add('active');
-        if (id === 'practice') renderNumGrid();
-        if (id === 'parent') updateParent();
-      }
+        <div class="steps">
+          <div class="step"><span>⬡</span>1 積木學懂</div>
+          <div class="step"><span>✎</span>2 自己算算</div>
+          <div class="step"><span>⚑</span>3 闖關挑戰</div>
+        </div>
 
-      function generateQuestions(table, count) {
-        var nums = [1,2,3,4,5,6,7,8,9];
-        for (var i = nums.length - 1; i > 0; i--) {
-          var j = Math.floor(Math.random() * (i + 1));
-          var t = nums[i]; nums[i] = nums[j]; nums[j] = t;
-        }
-        var list = [];
-        for (var k = 0; k < count; k++) {
-          var b = nums[k % 9];
-          list.push({ a: table, b: b, answer: table * b });
-        }
-        return list;
-      }
+        <div class="progress-row">
+          <span>冒險進度</span>
+          <span>1 / 29 關</span>
+        </div>
+        <div class="bar"><div class="bar-fill"></div></div>
 
-      function generateMixed(count) {
-        var list = [];
-        for (var i = 0; i < count; i++) {
-          var a = Math.floor(Math.random() * 8) + 2;
-          var b = Math.floor(Math.random() * 9) + 1;
-          list.push({ a: a, b: b, answer: a * b });
-        }
-        return list;
-      }
+        <div class="current">×2 · 練熟這一組</div>
+        <button class="btn-primary">繼續闖關 →</button>
+        <div class="map-link">☰ 看看完整冒險地圖</div>
+      </div>
 
-      function startAdventure() {
-        questions = generateQuestions(2, 5);
-        qIndex = 0;
-        correctCount = 0;
-        showScreen('learn');
-        renderQuestion();
-      }
+      <div class="section">
+        <h3>加強練習</h3>
+        <div class="hint">想多練一點？自己選，隨時都可以。</div>
 
-      function startPractice(n) {
-        questions = generateQuestions(n, 5);
-        qIndex = 0;
-        correctCount = 0;
-        showScreen('learn');
-        renderQuestion();
-      }
+        <div class="menu-item">
+          <div class="icon" style="background:#fce4ec;color:#e91e63;">👆</div>
+          <div class="text">
+            <strong>自選乘法練習</strong>
+            <span>自己選 2～9，練練想加強的乘法</span>
+          </div>
+        </div>
 
-      function startQuick() {
-        questions = generateQuestions(2, 3);
-        qIndex = 0;
-        correctCount = 0;
-        showScreen('learn');
-        renderQuestion();
-      }
+        <div class="menu-item">
+          <div class="icon" style="background:#e3f2fd;color:#1976d2;">📖</div>
+          <div class="text">
+            <strong>口訣與進度</strong>
+            <span>看看我的乘法</span>
+          </div>
+        </div>
 
-      function startMixed() {
-        questions = generateMixed(10);
-        qIndex = 0;
-        correctCount = 0;
-        showScreen('learn');
-        renderQuestion();
-      }
+        <div class="menu-item">
+          <div class="icon" style="background:#e8f5e9;color:#2e7d32;">🎁</div>
+          <div class="text">
+            <strong>我的收藏</strong>
+            <span>1 張貼紙 · 0 枚勳章</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      function renderQuestion() {
-        answered = false;
-        $('questionArea').style.display = 'block';
-        $('feedback').classList.remove('show');
+  <!-- ========== 完成畫面 ========== -->
+  <h2 class="section-title" id="complete">② 完成畫面</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:11</span><div class="icons">LTE 18</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>看懂積木</div>
+      <div style="width:36px"></div>
+    </div>
+    <div class="complete">
+      <div class="badge">✓</div>
+      <h2>這一關完成了！</h2>
+      <p>收下你的完成章</p>
+      <button class="btn btn-outline">🔊 再聽一次</button>
+      <button class="btn btn-yellow">☰ 回到乘法冒險</button>
+      <button class="btn btn-white">這次練習紀錄</button>
+      <div class="link-row">星星與收藏 ›</div>
+    </div>
+  </div>
 
-        var q = questions[qIndex];
-        if (!q) return;
+  <!-- ========== 看懂積木 選擇題 ========== -->
+  <h2 class="section-title" id="quiz1">③ 看懂積木 · 選擇題</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:10</span><div class="icons">LTE 18</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>看懂積木</div>
+      <div class="help">?</div>
+    </div>
+    <div class="quiz">
+      <div class="quiz-top">
+        <div class="progress-box">已完成 0 / 5</div>
+        <div style="font-size:0.8rem;color:#666;">🧊 每組 2 塊</div>
+      </div>
+      <div class="quiz-card">
+        <div class="ask">想一想，積木一共有幾塊？</div>
+        <div class="equation">2 × 2 = ? <div class="speaker">🔊</div></div>
+        <div class="labels"><span>每組 2 塊</span><span>共有 2 組</span></div>
+        <div class="blocks">
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+        </div>
+      </div>
+      <div class="choices">
+        <div class="choice">4</div>
+        <div class="choice">6</div>
+        <div class="choice">2</div>
+      </div>
+      <div class="hint-btn">💡 提示</div>
+    </div>
+  </div>
 
-        $('progText').textContent = '已完成 ' + qIndex + ' / ' + questions.length;
-        $('progFill').style.width = (qIndex / questions.length * 100) + '%';
-        $('groupLabel').textContent = '每組 ' + q.b + ' 塊';
+  <!-- ========== 看懂積木 答對 ========== -->
+  <h2 class="section-title">④ 看懂積木 · 答對回饋</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:11</span><div class="icons">LTE 18</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>看懂積木</div>
+      <div class="help">?</div>
+    </div>
+    <div class="quiz">
+      <div class="quiz-top">
+        <div class="progress-box">已完成 3 / 5</div>
+        <div style="font-size:0.8rem;color:#666;">🧊 每組 2 塊</div>
+      </div>
+      <div class="quiz-card">
+        <div class="ask">想一想，積木一共有幾塊？</div>
+        <div class="equation">2 × 4 = ? <div class="speaker">🔊</div></div>
+        <div class="labels"><span>每組 2 塊</span><span>共有 4 組</span></div>
+        <div class="blocks">
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+        </div>
+      </div>
+      <div class="feedback">
+        <span>✓ 答對了！</span>
+        <span class="stamp">答對章</span>
+      </div>
+      <div style="text-align:center;margin-top:20px;color:#888;font-size:0.9rem;">✨ 準備下一題...</div>
+    </div>
+  </div>
 
-        $('equation').textContent = q.a + ' × ' + q.b + ' = ?';
-        $('tagA').textContent = '每組 ' + q.b + ' 塊';
-        $('tagB').textContent = '共有 ' + q.a + ' 組';
+  <!-- ========== 練一練 ========== -->
+  <h2 class="section-title" id="quiz2">⑤ 練一練 · 選擇題</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:12</span><div class="icons">LTE 18</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>練一練</div>
+      <div class="help">?</div>
+    </div>
+    <div class="quiz">
+      <div class="quiz-top">
+        <div class="progress-box">已完成 1 / 6</div>
+        <div style="font-size:0.8rem;color:#666;">🧊 每組 2 塊</div>
+      </div>
+      <div class="quiz-card">
+        <div class="ask">想一想，積木一共有幾塊？</div>
+        <div class="equation">2 × 5 = ? <div class="speaker">🔊</div></div>
+        <div class="labels"><span>每組 2 塊</span><span>共有 5 組</span></div>
+        <div class="blocks">
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+        </div>
+      </div>
+      <div class="choices">
+        <div class="choice">12</div>
+        <div class="choice">8</div>
+        <div class="choice">10</div>
+      </div>
+      <div class="hint-btn">💡 提示</div>
+    </div>
+  </div>
 
-        var area = $('blocksArea');
-        area.innerHTML = '';
-        for (var i = 0; i < q.a; i++) {
-          var g = document.createElement('div');
-          g.className = 'group';
-          for (var j = 0; j < q.b; j++) {
-            var b = document.createElement('div');
-            b.className = 'block';
-            g.appendChild(b);
-          }
-          area.appendChild(g);
-        }
+  <!-- ========== 小挑戰 數字鍵盤 ========== -->
+  <h2 class="section-title" id="challenge">⑥ 小挑戰 · 數字鍵盤</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:13</span><div class="icons">LTE 17</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>小挑戰</div>
+      <div class="help">?</div>
+    </div>
+    <div class="quiz">
+      <div class="quiz-top">
+        <div class="progress-box">已完成 3 / 8</div>
+        <div style="font-size:0.8rem;color:#666;">🧊 每組 2 塊</div>
+      </div>
+      <div class="quiz-card">
+        <div class="ask">想一想，積木一共有幾塊？</div>
+        <div class="equation">2 × 9 = ? <div class="speaker">🔊</div></div>
+        <div class="labels"><span>每組 2 塊</span><span>共有 9 組</span></div>
+        <div class="blocks">
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+          <div class="block-group"><div class="block"></div><div class="block"></div></div>
+        </div>
+      </div>
+      <div class="numpad">
+        <div class="num">1</div><div class="num">2</div><div class="num">3</div>
+        <div class="num">4</div><div class="num">5</div><div class="num">6</div>
+        <div class="num">7</div><div class="num">8</div><div class="num">9</div>
+        <div class="num del">⌫</div><div class="num">0</div><div class="num ok">✓</div>
+      </div>
+      <div class="hint-btn">💡 提示</div>
+    </div>
+  </div>
 
-        var opts = makeOptions(q.answer);
-        var box = $('options');
-        box.innerHTML = '';
-        for (var k = 0; k < opts.length; k++) {
-          (function (num) {
-            var btn = document.createElement('button');
-            btn.className = 'opt';
-            btn.textContent = num;
-            btn.addEventListener('click', function () {
-              checkAnswer(num, q.answer, btn);
-            });
-            box.appendChild(btn);
-          })(opts[k]);
-        }
-      }
+  <!-- ========== 獎勵畫面 ========== -->
+  <h2 class="section-title" id="reward">⑦ 獎勵畫面</h2>
+  <div class="phone">
+    <div class="status-bar"><span>08:13</span><div class="icons">LTE 17</div></div>
+    <div class="nav">
+      <div class="back">‹</div>
+      <div>小挑戰</div>
+      <div style="width:36px"></div>
+    </div>
+    <div class="reward">
+      <div class="badge">✓</div>
+      <h2>這一關完成了！</h2>
+      <div class="sub">收下你的完成章</div>
+      <div class="reward-card">
+        <div class="congrats">🎉 恭喜獲得新收藏！</div>
+        <div class="star">⭐</div>
+        <div class="star-text">努力星星 +1</div>
+        <div class="star-sub">累積 3 顆</div>
+        <div class="collect">
+          <div class="collect-item">
+            <div class="pic">🐰</div>
+            <div class="label">乘法勳章</div>
+            <div class="name">雙倍魔法兔</div>
+          </div>
+          <div class="collect-item">
+            <div class="pic">🌈</div>
+            <div class="label">努力貼紙</div>
+            <div class="name">彩虹</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-pink">→ 繼續</button>
+    </div>
+  </div>
 
-      function makeOptions(correct) {
-        var set = {};
-        set[correct] = true;
-        var arr = [correct];
-        while (arr.length < 3) {
-          var d = correct + (Math.floor(Math.random() * 5) - 2);
-          if (d <= 0) d = correct + Math.floor(Math.random() * 4) + 1;
-          if (!set[d]) {
-            set[d] = true;
-            arr.push(d);
-          }
-        }
-        for (var i = arr.length - 1; i > 0; i--) {
-          var j = Math.floor(Math.random() * (i + 1));
-          var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-        }
-        return arr;
-      }
+  <p style="text-align:center;color:#888;font-size:0.85rem;margin-top:30px;">
+    完整合併版 · 可直接上傳 GitHub 或 Netlify 分享
+  </p>
 
-      function checkAnswer(chosen, correct, btn) {
-        if (answered) return;
-        answered = true;
-
-        var all = document.querySelectorAll('.opt');
-        for (var i = 0; i < all.length; i++) {
-          all[i].disabled = true;
-        }
-
-        if (chosen === correct) {
-          btn.classList.add('correct');
-          correctCount++;
-          storageSet('today', storageGet('today', 0) + 1);
-          storageSet('totalCorrect', storageGet('totalCorrect', 0) + 1);
-          showFeedback(true, correct);
-        } else {
-          btn.classList.add('wrong');
-          for (var i = 0; i < all.length; i++) {
-            if (parseInt(all[i].textContent, 10) === correct) {
-              all[i].classList.add('correct');
-            }
-          }
-          showFeedback(false, correct);
-        }
-      }
-
-      function showFeedback(isCorrect, answer) {
-        $('questionArea').style.display = 'none';
-        var fb = $('feedback');
-        fb.classList.add('show');
-
-        var q = questions[qIndex];
-        if (isCorrect) {
-          var emojis = ['🎉', '🌟', '👏', '💪', '🏆'];
-          var titles = ['太棒了！', '答對了！', '真厲害！', '滿分！'];
-          $('fbEmoji').textContent = emojis[Math.floor(Math.random() * emojis.length)];
-          $('fbTitle').textContent = titles[Math.floor(Math.random() * titles.length)];
-        } else {
-          $('fbEmoji').textContent = '💪';
-          $('fbTitle').textContent = '再想一次！';
-        }
-        $('fbMsg').textContent = q.a + ' × ' + q.b + ' = ' + answer;
-      }
-
-      function nextQuestion() {
-        qIndex++;
-        if (qIndex >= questions.length) {
-          alert('本回合完成！\n答對 ' + correctCount + ' / ' + questions.length + ' 題');
-          showScreen('home');
-          return;
-        }
-        renderQuestion();
-      }
-
-      function showHint() {
-        var q = questions[qIndex];
-        if (!q) return;
-        var parts = [];
-        for (var i = 0; i < q.a; i++) parts.push(q.b);
-        alert('提示：\n一共有 ' + q.a + ' 組，每組有 ' + q.b + ' 塊積木。\n可以一個一個數，或用加法想：\n' + parts.join(' + ') + ' = ?');
-      }
-
-      function renderNumGrid() {
-        var grid = $('numGrid');
-        grid.innerHTML = '';
-        for (var n = 2; n <= 9; n++) {
-          (function (num) {
-            var btn = document.createElement('button');
-            btn.className = 'num' + (num > 2 ? ' locked' : '');
-            btn.innerHTML = num + '<small>乘法</small>';
-            btn.addEventListener('click', function () {
-              if (num === 2) {
-                startPractice(2);
-              } else {
-                alert('完整內容請家長開啟\n（此示範版僅開放 ×2）');
-              }
-            });
-            grid.appendChild(btn);
-          })(n);
-        }
-      }
-
-      function updateParent() {
-        $('todayCount').textContent = storageGet('today', 0);
-        $('totalCorrect').textContent = storageGet('totalCorrect', 0);
-
-        var status = $('groupStatus');
-        status.innerHTML = '';
-        for (var n = 2; n <= 9; n++) {
-          var div = document.createElement('div');
-          var state = n === 2 ? '進行中' : '未開始';
-          var color = n === 2 ? '#3b82f6' : '#94a3b8';
-          div.innerHTML = '<div style="font-weight:800;color:' + color + '">×' + n + '</div><div style="font-size:11px;color:#64748b;margin-top:3px">' + state + '</div>';
-          status.appendChild(div);
-        }
-      }
-
-      function bind() {
-        $('btnStart').addEventListener('click', startAdventure);
-        $('btnPractice').addEventListener('click', function () { showScreen('practice'); });
-        $('btnQuick').addEventListener('click', startQuick);
-        $('btnParent').addEventListener('click', function () { showScreen('parent'); });
-        $('btnHelpHome').addEventListener('click', function () {
-          alert('這是一個幫助小朋友用積木理解乘法的小遊戲！\n從積木看懂 → 自己算算 → 關卡挑戰');
-        });
-
-        $('btnBackLearn').addEventListener('click', function () { showScreen('home'); });
-        $('btnHelpLearn').addEventListener('click', showHint);
-        $('btnHint').addEventListener('click', showHint);
-        $('btnNext').addEventListener('click', nextQuestion);
-
-        $('btnBackPractice').addEventListener('click', function () { showScreen('home'); });
-        $('btnMixed').addEventListener('click', startMixed);
-
-        $('btnBackParent').addEventListener('click', function () { showScreen('home'); });
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bind);
-      } else {
-        bind();
-      }
-    })();
-  </script>
 </body>
 </html>
