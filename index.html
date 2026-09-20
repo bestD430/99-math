@@ -522,12 +522,20 @@
       if (json.routeStatus === '3' || !(json.busStop || []).length) {
         throw new Error(json.routeStatusRemarkTitle || '此港鐵巴士路線目前停止服務或無資料');
       }
-      return (json.busStop || []).map((s, i) => ({
-        seq: i + 1,
-        stopId: s.busStopId || String(i),
-        name: s.busStopName || ('車站 ' + (i + 1)),
-        raw: s
-      }));
+      return (json.busStop || []).map((s, i) => {
+        let name = '';
+        if (typeof s.busStopName === 'string') name = s.busStopName;
+        else if (s.busStopName && s.busStopName.zh) name = s.busStopName.zh;
+        else if (typeof s.busStopNameName === 'string') name = s.busStopNameName;
+        else if (s.busStopNameName && s.busStopNameName.zh) name = s.busStopNameName.zh;
+
+        return {
+          seq: i + 1,
+          stopId: s.busStopId || String(i),
+          name: name || ('車站 ' + (i + 1)),
+          raw: s
+        };
+      });
     }
 
     function renderStops(stops) {
