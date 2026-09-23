@@ -7,7 +7,6 @@
   <style>
     :root {
       --primary: #00A0E9;
-      --primary-dark: #0088cc;
       --bg: #f2f2f7;
       --card: #ffffff;
       --text: #1c1c1e;
@@ -99,13 +98,14 @@
       line-height: 1.1;
     }
     
-    /* 路線牌 house color */
+    /* 路線牌 house color (整合兩處重複定義) */
     .plate-kmb { background: #E4002B; color: #fff; }          /* 九巴紅 */
     .plate-lwb { background: #F15A22; color: #fff; }          /* 龍運橙 */
     .plate-ctb { background: #FFD100; color: #1a1a1a; }       /* 城巴黃 */
     .plate-nlb { background: #007A3D; color: #fff; }          /* 嶼巴綠 */
     .plate-gmb { background: #00A651; color: #fff; }          /* 小巴綠 */
     .plate-mtrbus { background: #0077C8; color: #fff; }       /* 港鐵藍 */
+
     .result-info { flex: 1; min-width: 0; }
     .result-dest {
       font-size: 0.98rem;
@@ -129,12 +129,6 @@
       padding: 40px 20px;
       color: var(--muted);
       font-size: 0.95rem;
-    }
-    .error-state {
-      text-align: center;
-      padding: 24px 20px;
-      color: var(--red);
-      font-size: 0.9rem;
     }
 
     /* Keypad */
@@ -174,15 +168,13 @@
       transform: scale(0.96);
     }
     .key-letter {
-      flex: 1;
+      flex: 0 0 42px;
       max-width: 48px;
-      width: 42px;
       height: 42px;
       border-radius: 50%;
       font-size: 1.05rem;
       background: #d8dce0;
       color: #1c1c1e;
-      flex: 0 0 42px;
     }
     .key-letter:active { background: #b0b6bc; }
     .key-func {
@@ -254,14 +246,6 @@
       gap: 12px;
     }
     .stop-item:active { background: #f2f2f7; }
-    .stop-seq {
-      font-size: 0.85rem;
-      color: var(--muted);
-      min-width: 28px;
-      font-weight: 600;
-    }
-    .stop-name { font-size: 0.98rem; font-weight: 500; flex: 1; }
-    .stop-arrow { color: #c7c7cc; }
 
     /* ETA board */
     .eta-header-info {
@@ -269,7 +253,6 @@
       color: white;
       padding: 16px;
     }
-    
     .eta-route-num {
       font-size: 2.1rem;
       font-weight: 700;
@@ -279,12 +262,6 @@
       letter-spacing: 0.5px;
       line-height: 1.1;
     }
-    .eta-route-num.plate-kmb { background: #E4002B; color: #fff; }
-    .eta-route-num.plate-lwb { background: #F15A22; color: #fff; }
-    .eta-route-num.plate-ctb { background: #FFD100; color: #1a1a1a; }
-    .eta-route-num.plate-nlb { background: #007A3D; color: #fff; }
-    .eta-route-num.plate-gmb { background: #00A651; color: #fff; }
-    .eta-route-num.plate-mtrbus { background: #0077C8; color: #fff; }
     .eta-dest-text { font-size: 0.95rem; color: #aeaeb2; margin-top: 4px; }
     .eta-stop-text { font-size: 0.9rem; margin-top: 8px; }
     .eta-co-badge {
@@ -296,13 +273,6 @@
       margin-top: 6px;
     }
     .eta-rows { padding: 8px 0; }
-    .eta-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-    }
     .eta-mins {
       font-size: 1.4rem;
       font-weight: 700;
@@ -311,16 +281,6 @@
     }
     .eta-mins.soon { color: var(--amber); }
     .eta-mins.arrived { color: var(--red); }
-    .eta-clock {
-      font-size: 0.88rem;
-      color: var(--muted);
-      text-align: right;
-    }
-    .eta-empty {
-      text-align: center;
-      padding: 40px 16px;
-      color: var(--muted);
-    }
     .eta-toolbar {
       display: flex;
       gap: 8px;
@@ -341,10 +301,6 @@
       font-family: inherit;
     }
     .eta-btn:active { background: #e5e5ea; }
-    .eta-btn.active-refresh {
-      background: var(--primary);
-      color: white;
-    }
     .eta-refresh-info {
       text-align: center;
       font-size: 0.75rem;
@@ -407,7 +363,7 @@
 <body>
   <div class="app">
 
-    <!-- ========== PAGE: SEARCH ========== -->
+    <!-- PAGE: SEARCH -->
     <div class="page active" id="pageSearch">
       <div class="header">搜尋</div>
       <div class="search-box">
@@ -450,7 +406,7 @@
       </div>
     </div>
 
-    <!-- ========== PAGE: STOPS ========== -->
+    <!-- PAGE: STOPS -->
     <div class="page" id="pageStops">
       <div class="page-header">
         <button class="back-btn" onclick="goSearch()">‹</button>
@@ -462,7 +418,7 @@
       </div>
     </div>
 
-    <!-- ========== PAGE: ETA ========== -->
+    <!-- PAGE: ETA -->
     <div class="page" id="pageEta">
       <div class="page-header">
         <button class="back-btn" onclick="goStops()">‹</button>
@@ -488,30 +444,9 @@
   </div>
 
   <script>
-    const CO_NAMES = {
-      kmb: '九巴', lwb: '龍運', ctb: '城巴',
-      nlb: '嶼巴（大嶼山巴士）', gmb: '專線小巴', mtrbus: '港鐵巴士'
-    };
-
-    function shortCo(co) { return CO_NAMES[co] || co || ''; }
-
-    // 原生小巴資料集
-    const GMB_ROUTE_INDEX = {"1":[{"r":"HKI","id":2006408,"c":"1","d":[{"s":1,"o":"山頂(公共交通總站)","t":"中環(香港站公共運輸交匯處)"},{"s":2,"o":"中環(香港站公共運輸交匯處)","t":"山頂(公共交通總站)"}]},{"r":"NT","id":2002337,"c":"1","d":[{"s":1,"o":"西貢","t":"九龍灣(德福花園)"},{"s":2,"o":"九龍灣(德福花園)","t":"西貢"}]}],"10":[{"r":"HKI","id":2006706,"c":"10","d":[{"s":1,"o":"銅鑼灣(謝斐道)","t":"數碼港公共運輸交匯處"},{"s":2,"o":"數碼港巴士總站","t":"謝斐道, 近兆安廣場"}]}],"12":[{"r":"HKI","id":2002285,"c":"12","d":[{"s":1,"o":"觀龍樓","t":"西營盤(循環線)"}]},{"r":"KLN","id":2002329,"c":"12","d":[{"s":1,"o":"白田","t":"旺角東站"},{"s":2,"o":"旺角東站","t":"白田"}]}],"16":[{"r":"KLN","id":2004629,"c":"16","d":[{"s":1,"o":"扎山道(彩雲邨)","t":"坪石邨(循環線)"}]},{"r":"NT","id":2006641,"c":"16","d":[{"s":1,"o":"寶琳","t":"布袋澳"},{"s":2,"o":"布袋澳","t":"寶琳"}]}]};
-
-    // 快取索引 Map 化以加速搜尋
-    const gmbMap = new Map();
-    Object.keys(GMB_ROUTE_INDEX).forEach(key => {
-      gmbMap.set(key.toUpperCase(), GMB_ROUTE_INDEX[key]);
-    });
-
-    const LS_FAV = 'hkbus_fav_v1';
-    const LS_HIST = 'hkbus_hist_v1';
-    const HIST_MAX = 20;
-    const FAV_MAX = 30;
-
-    let favsCache = loadJSON(LS_FAV, []);
-    let histCache = loadJSON(LS_HIST, []);
-    let favMap = new Map(favsCache.map(item => [item.key, item]));
+    const CO_NAMES = { kmb: '九巴', lwb: '龍運', ctb: '城巴', nlb: '嶼巴（大嶼山巴士）', gmb: '專線小巴', mtrbus: '港鐵巴士' };
+    const LS_FAV = 'hkbus_fav_v1', LS_HIST = 'hkbus_hist_v1';
+    const HIST_MAX = 20, FAV_MAX = 30;
 
     function loadJSON(key, fallback) {
       try {
@@ -524,12 +459,7 @@
     }
 
     function routeKey(m, route) {
-      return [
-        (route || m.route || '').toUpperCase(),
-        m.co || '', m.bound || '', m.serviceType || '1',
-        m.nlbRouteId || '', m.gmbRouteId || '', m.gmbRouteSeq || '',
-        m.mtrDir || '', m.dirPath || ''
-      ].join('|');
+      return [(route || m.route || '').toUpperCase(), m.co || '', m.bound || '', m.serviceType || '1', m.nlbRouteId || '', m.gmbRouteId || '', m.gmbRouteSeq || '', m.mtrDir || '', m.dirPath || ''].join('|');
     }
 
     function snapshotRoute(m, route) {
@@ -538,226 +468,56 @@
         route: (route || m.route || '').toUpperCase(),
         co: m.co, bound: m.bound, serviceType: m.serviceType || '1',
         label: m.label || '', sub: m.sub || '', dest: m.dest || '',
-        nlbRouteId: m.nlbRouteId || null, gmbRouteId: m.gmbRouteId || null,
-        gmbRouteSeq: m.gmbRouteSeq || null, dirPath: m.dirPath || null,
-        mtrDir: m.mtrDir || '', at: Date.now()
+        nlbRouteId: m.nlbRouteId || null, gmbRouteId: m.gmbRouteId || null, gmbRouteSeq: m.gmbRouteSeq || null,
+        dirPath: m.dirPath || null, mtrDir: m.mtrDir || '', at: Date.now()
       };
     }
 
+    function getFavs() { return loadJSON(LS_FAV, []); }
+    function getHist() { return loadJSON(LS_HIST, []); }
+
     function isFav(m, route) {
-      return favMap.has(routeKey(m, route));
+      return getFavs().some(f => f.key === routeKey(m, route));
     }
 
     function toggleFav(m, route) {
+      let list = getFavs();
       const k = routeKey(m, route);
-      if (favMap.has(k)) {
-        favMap.delete(k);
-      } else {
-        if (favMap.size >= FAV_MAX) {
-          const firstKey = favMap.keys().next().value;
-          favMap.delete(firstKey);
-        }
-        favMap.set(k, snapshotRoute(m, route));
+      const idx = list.findIndex(f => f.key === k);
+      if (idx >= 0) list.splice(idx, 1);
+      else {
+        list.unshift(snapshotRoute(m, route));
+        if (list.length > FAV_MAX) list = list.slice(0, FAV_MAX);
       }
-      favsCache = Array.from(favMap.values());
-      saveJSON(LS_FAV, favsCache);
-      return favMap.has(k);
-    }
-
-    function addHistory(m, route) {
-      const snap = snapshotRoute(m, route);
-      histCache = histCache.filter(h => h.key !== snap.key);
-      histCache.unshift(snap);
-      if (histCache.length > HIST_MAX) histCache = histCache.slice(0, HIST_MAX);
-      saveJSON(LS_HIST, histCache);
+      saveJSON(LS_FAV, list);
+      return idx < 0;
     }
 
     function clearHistory() {
-      histCache = [];
       saveJSON(LS_HIST, []);
-      if (!inputVal) renderHome();
+      renderHome();
     }
 
     function clearFavs() {
       if (!confirm('確定清除全部收藏？')) return;
-      favMap.clear();
-      favsCache = [];
       saveJSON(LS_FAV, []);
-      if (!inputVal) renderHome();
+      renderHome();
       updateHeaderFavBtns();
-    }
-
-    // ========== DOM & 高效能渲染 ==========
-    const resultsEl = document.getElementById('results');
-    const routeInputEl = document.getElementById('routeInput');
-    let inputVal = '';
-    let searchDebounceTimer = null;
-    let abortController = null;
-
-    let state = {
-      co: null, route: null, bound: null, serviceType: null,
-      directionLabel: null, stopId: null, stopName: null,
-      nlbRouteId: null, gmbRouteId: null, gmbRouteSeq: null,
-      dirPath: null, mtrRawStop: null, mtrDir: null,
-      auto: false, timer: null
-    };
-
-    function renderSavedItem(item, fragment) {
-      const div = document.createElement('div');
-      div.className = 'result-item';
-      div.dataset.itemData = JSON.stringify(item);
-      const plate = 'plate-' + (item.co || 'kmb');
-      const destText = (item.label || '').replace(/^.*?→\s*/, '') || item.dest || item.route;
-      const coTag = (item.co === 'nlb' || item.co === 'ctb' || item.co === 'gmb' || item.co === 'mtrbus')
-        ? ' - ' + shortCo(item.co) : '';
-      const starOn = isFav(item, item.route);
-
-      div.innerHTML = `
-        <div class="result-num ${plate}">${item.route}</div>
-        <div class="result-info">
-          <div class="result-dest">往 ${destText}${coTag}</div>
-          <div class="result-co">${CO_NAMES[item.co] || item.co || ''}${item.sub ? ' · ' + item.sub : ''}</div>
-        </div>
-        <button class="fav-btn ${starOn ? 'on' : ''}" data-fav="1">${starOn ? '★' : '☆'}</button>
-        <div class="result-arrow">›</div>`;
-      fragment.appendChild(div);
-    }
-
-    function renderHome() {
-      resultsEl.innerHTML = '';
-      if (!favsCache.length && !histCache.length) {
-        resultsEl.innerHTML = '<div class="home-hint">輸入路線號碼開始搜尋<br><small style="opacity:.7">選過的路線會出現在這裡</small></div>';
-        return;
-      }
-      const fragment = document.createDocumentFragment();
-
-      if (favsCache.length) {
-        const t = document.createElement('div');
-        t.className = 'section-title';
-        t.innerHTML = '<span>★ 收藏</span><button class="clear-link" type="button" onclick="clearFavs()">清除</button>';
-        fragment.appendChild(t);
-        favsCache.forEach(item => renderSavedItem(item, fragment));
-      }
-      if (histCache.length) {
-        const t = document.createElement('div');
-        t.className = 'section-title';
-        t.innerHTML = '<span>最近搜尋</span><button class="clear-link" type="button" onclick="clearHistory()">清除</button>';
-        fragment.appendChild(t);
-        histCache.forEach(item => renderSavedItem(item, fragment));
-      }
-      resultsEl.appendChild(fragment);
-    }
-
-    // 事件委派：點擊搜尋結果
-    resultsEl.addEventListener('click', (e) => {
-      const itemEl = e.target.closest('.result-item');
-      if (!itemEl) return;
-      
-      const item = JSON.parse(itemEl.dataset.itemData);
-      if (e.target.closest('[data-fav]')) {
-        e.stopPropagation();
-        toggleFav(item, item.route);
-        if (!inputVal) {
-          renderHome();
-        } else {
-          const btn = itemEl.querySelector('[data-fav]');
-          const on = isFav(item, item.route);
-          btn.textContent = on ? '★' : '☆';
-          btn.classList.toggle('on', on);
-        }
-        return;
-      }
-      selectRoute(item, item.route);
-    });
-
-    // 鍵盤輸入事件委派
-    document.getElementById('keypad').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-k]');
-      if (!btn) return;
-      const k = btn.dataset.k;
-      if (k === 'clear') inputVal = '';
-      else if (k === 'back') inputVal = inputVal.slice(0, -1);
-      else if (inputVal.length < 8) inputVal += k;
-
-      routeInputEl.value = inputVal;
-      
-      clearTimeout(searchDebounceTimer);
-      searchDebounceTimer = setTimeout(onSearchInput, 100);
-    });
-
-    function onSearchInput() {
-      if (!inputVal) {
-        renderHome();
-        return;
-      }
-      resultsEl.innerHTML = '<div class="loading-state">搜尋中...</div>';
-      
-      // 中斷上一次尚未完成的請求
-      if (abortController) abortController.abort();
-      abortController = new AbortController();
-
-      const query = inputVal.toUpperCase();
-      const fragment = document.createDocumentFragment();
-
-      // 優化 1：迅速從 Map 取出小巴本地數據
-      if (gmbMap.has(query)) {
-        gmbMap.get(query).forEach(g => {
-          g.d.forEach(dir => {
-            renderSavedItem({
-              route: query, co: 'gmb', bound: dir.s, serviceType: '1',
-              label: `${dir.o} → ${dir.t}`, dest: dir.t, gmbRouteId: g.id, gmbRouteSeq: dir.s
-            }, fragment);
-          });
-        });
-      }
-
-      if (fragment.children.length > 0) {
-        resultsEl.innerHTML = '';
-        resultsEl.appendChild(fragment);
-      } else {
-        resultsEl.innerHTML = '<div class="empty-state">未有找到相關路線</div>';
-      }
-    }
-
-    function selectRoute(item, route) {
-      addHistory(item, route);
-      state.route = route;
-      state.co = item.co;
-      state.bound = item.bound;
-      state.directionLabel = item.label || item.dest;
-      state.gmbRouteId = item.gmbRouteId;
-      state.gmbRouteSeq = item.gmbRouteSeq;
-      
-      document.getElementById('stopsTitle').textContent = `${route} - ${state.directionLabel}`;
-      document.getElementById('pageSearch').classList.remove('active');
-      document.getElementById('pageStops').classList.add('active');
-      updateHeaderFavBtns();
-    }
-
-    function goSearch() {
-      document.getElementById('pageStops').classList.remove('active');
-      document.getElementById('pageSearch').classList.add('active');
-      if (!inputVal) renderHome();
-    }
-
-    function goStops() {
-      document.getElementById('pageEta').classList.remove('active');
-      document.getElementById('pageStops').classList.add('active');
     }
 
     function favItemFromState() {
       return {
         route: state.route, co: state.co, bound: state.bound,
-        serviceType: state.serviceType || '1', label: state.directionLabel || '',
+        serviceType: state.serviceType || '1', label: state.directionLabel || '', sub: '',
         dest: state.directionLabel || '', nlbRouteId: state.nlbRouteId,
-        gmbRouteId: state.gmbRouteId, gmbRouteSeq: state.gmbRouteSeq
+        gmbRouteId: state.gmbRouteId, gmbRouteSeq: state.gmbRouteSeq,
+        dirPath: state.dirPath, mtrDir: state.mtrDir || ''
       };
     }
 
     function updateHeaderFavBtns() {
       if (!state.route || !state.co) return;
-      const m = favItemFromState();
-      const on = isFav(m, state.route);
+      const on = isFav(favItemFromState(), state.route);
       ['stopsFavBtn', 'etaFavBtn'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) {
@@ -773,6 +533,73 @@
       updateHeaderFavBtns();
     }
     function toggleFavFromEta() { toggleFavFromStops(); }
+
+    function renderSavedItem(item, el, showStar) {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      const plate = 'plate-' + (item.co || 'kmb');
+      const destText = (item.label || '').replace(/^.*?→\s*/, '') || item.dest || item.route;
+      const starOn = isFav(item, item.route);
+      div.innerHTML = `
+        <div class="result-num ${plate}">${item.route}</div>
+        <div class="result-info">
+          <div class="result-dest">往 ${destText}</div>
+          <div class="result-co">${CO_NAMES[item.co] || item.co || ''}${item.sub ? ' · ' + item.sub : ''}</div>
+        </div>
+        ${showStar ? `<button class="fav-btn${starOn ? ' on' : ''}" data-fav="1">${starOn ? '★' : '☆'}</button>` : ''}
+        <div class="result-arrow">›</div>`;
+      div.addEventListener('click', e => {
+        if (e.target.closest('[data-fav]')) {
+          e.stopPropagation();
+          toggleFav(item, item.route);
+          renderHome();
+          return;
+        }
+        selectRoute(item, item.route);
+      });
+      el.appendChild(div);
+    }
+
+    function renderHome() {
+      const el = document.getElementById('results');
+      const favs = getFavs(), hist = getHist();
+      el.innerHTML = '';
+      if (!favs.length && !hist.length) {
+        el.innerHTML = '<div class="home-hint">輸入路線號碼開始搜尋<br><small style="opacity:.7">選過的路線會出現在這裡</small></div>';
+        return;
+      }
+      if (favs.length) {
+        const t = document.createElement('div');
+        t.className = 'section-title';
+        t.innerHTML = '<span>★ 收藏</span><button class="clear-link" type="button">清除</button>';
+        t.querySelector('.clear-link').onclick = clearFavs;
+        el.appendChild(t);
+        favs.forEach(item => renderSavedItem(item, el, true));
+      }
+      if (hist.length) {
+        const t = document.createElement('div');
+        t.className = 'section-title';
+        t.innerHTML = '<span>最近搜尋</span><button class="clear-link" type="button">清除</button>';
+        t.querySelector('.clear-link').onclick = clearHistory;
+        el.appendChild(t);
+        hist.forEach(item => renderSavedItem(item, el, true));
+      }
+    }
+
+    let state = {
+      co: null, route: null, bound: null, serviceType: null,
+      directionLabel: null, stopId: null, stopName: null,
+      nlbRouteId: null, gmbRouteId: null, gmbRouteSeq: null,
+      dirPath: null, mtrRawStop: null, mtrDir: null,
+      auto: false, timer: null
+    };
+
+    // 清理後的專線小巴路線索引資料
+    const GMB_ROUTE_INDEX = {
+      "1": [{"r":"HKI","id":2006408,"c":"1","d":[{"s":1,"o":"山頂(公共交通總站)","t":"中環(香港站公共運輸交匯處)"},{"s":2,"o":"中環(香港站公共運輸交匯處)","t":"山頂(公共交通總站)"}]}],
+      "10": [{"r":"HKI","id":2006706,"c":"10","d":[{"s":1,"o":"銅鑼灣(謝斐道)","t":"數碼港公共運輸交匯處"},{"s":2,"o":"數碼港巴士總站","t":"謝斐道, 近兆安廣場"}]}],
+      "10P": [{"r":"HKI","id":2006739,"c":"10P","d":[{"s":1,"o":"謝斐道, 近兆安廣場","t":"數碼港巴士總站"},{"s":2,"o":"數碼港巴士總站","t":"謝斐道, 近兆安廣場"}]}]
+    };
 
     // 初始化頁面
     renderHome();
