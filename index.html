@@ -89,11 +89,11 @@
     .result-item:active { background: #f2f2f7; }
     
     .result-num {
-      font-size: 1.725rem;
+      font-size: 1.5rem;
       font-weight: 700;
       min-width: 64px;
       text-align: center;
-      padding: 4px 10px;
+      padding: 6px 10px;
       border-radius: 6px;
       letter-spacing: 0.5px;
       line-height: 1.1;
@@ -153,12 +153,12 @@
     .key {
       flex: 1;
       max-width: 72px;
-      height: 46px;
+      height: 44px;
       border: none;
       border-radius: 8px;
       background: white;
-      font-size: 1.35rem;
-      font-weight: 500;
+      font-size: 1.3rem;
+      font-weight: 600;
       color: var(--text);
       cursor: pointer;
       font-family: inherit;
@@ -175,13 +175,11 @@
     .key-letter {
       flex: 1;
       max-width: 48px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      font-size: 1.05rem;
+      height: 40px;
+      border-radius: 6px;
+      font-size: 1rem;
       background: #d8dce0;
       color: #1c1c1e;
-      flex: 0 0 42px;
     }
     .key-letter:active { background: #b0b6bc; }
     .key-func {
@@ -207,11 +205,8 @@
       flex-direction: column;
       gap: 5px;
     }
-    .letter-pad .key-row {
-      justify-content: center;
-    }
 
-    /* 天氣與警告 Widget (位於鍵盤下方) */
+    /* Weather Bar */
     .weather-bar {
       flex-shrink: 0;
       background: #1c232a;
@@ -294,7 +289,6 @@
       text-align: center;
       font-size: 1.05rem;
       font-weight: 600;
-      margin-right: 36px;
     }
 
     .stop-list, .eta-area {
@@ -374,11 +368,6 @@
       color: var(--muted);
       text-align: right;
     }
-    .eta-empty {
-      text-align: center;
-      padding: 40px 16px;
-      color: var(--muted);
-    }
     .eta-toolbar {
       display: flex;
       gap: 8px;
@@ -399,10 +388,6 @@
       font-family: inherit;
     }
     .eta-btn:active { background: #e5e5ea; }
-    .eta-btn.active-refresh {
-      background: var(--primary);
-      color: white;
-    }
     .eta-refresh-info {
       text-align: center;
       font-size: 0.75rem;
@@ -467,9 +452,9 @@
 
     <!-- ========== PAGE: SEARCH ========== -->
     <div class="page active" id="pageSearch">
-      <div class="header">搜尋</div>
+      <div class="header">搜尋路線</div>
       <div class="search-box">
-        <input type="text" class="search-input" id="routeInput" placeholder="輸入路線號碼" readonly inputmode="none">
+        <input type="text" class="search-input" id="routeInput" placeholder="輸入路線號碼 (例如 1A, E22)" readonly inputmode="none">
       </div>
       <div class="results" id="results">
         <div class="empty-state">輸入路線號碼開始搜尋</div>
@@ -498,16 +483,11 @@
               <button class="key key-func" data-k="back">⌫</button>
             </div>
           </div>
-          <div class="letter-pad" id="letterKeys">
-            <div class="key-row"><button class="key key-letter" data-k="A">A</button><button class="key key-letter" data-k="B">B</button><button class="key key-letter" data-k="C">C</button><button class="key key-letter" data-k="D">D</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="E">E</button><button class="key key-letter" data-k="F">F</button><button class="key key-letter" data-k="H">H</button><button class="key key-letter" data-k="K">K</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="M">M</button><button class="key key-letter" data-k="N">N</button><button class="key key-letter" data-k="P">P</button><button class="key key-letter" data-k="R">R</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="S">S</button><button class="key key-letter" data-k="T">T</button><button class="key key-letter" data-k="W">W</button><button class="key key-letter" data-k="X">X</button></div>
-          </div>
+          <div class="letter-pad" id="letterKeys"></div>
         </div>
       </div>
 
-      <!-- ========== 鍵盤下方天氣與警告資訊 ========== -->
+      <!-- 天氣與警告資訊 -->
       <div class="weather-bar" id="weatherBar">
         <div class="weather-bar-inner">
           <div class="weather-info">
@@ -537,7 +517,7 @@
     <div class="page" id="pageEta">
       <div class="page-header">
         <button class="back-btn" onclick="goStops()">‹</button>
-        <div class="page-title">預計到站</div>
+        <div class="page-title">預計到站時間</div>
         <button class="fav-btn" id="etaFavBtn" onclick="toggleFavFromEta()" title="收藏此路線">☆</button>
       </div>
       <div class="eta-area" id="etaArea">
@@ -562,10 +542,10 @@
     const LETTERS = ['A','B','C','D','E','F','H','K','M','N','P','R','S','T','W','X'];
     const CO_NAMES = {
       kmb: '九巴',
-      lwb: '龍運',
+      lwb: '龍運巴士',
       ctb: '城巴',
-      nlb: '嶼巴（大嶼山巴士）',
-      gmb: '專線小巴',
+      nlb: '新大嶼山巴士',
+      gmb: '綠色專線小巴',
       mtrbus: '港鐵巴士'
     };
 
@@ -579,8 +559,9 @@
       return false;
     }
 
+    // 初始化字母鍵盤
     const letterBox = document.getElementById('letterKeys');
-    if (letterBox && !letterBox.children.length) {
+    if (letterBox) {
       for (let i = 0; i < LETTERS.length; i += 4) {
         const row = document.createElement('div');
         row.className = 'key-row';
@@ -606,9 +587,7 @@
         const reportData = await reportRes.json();
         const warningData = await warningRes.json();
 
-        // 溫度與概述
         if (reportData.temperature && reportData.temperature.data && reportData.temperature.data.length > 0) {
-          // 預設取天文台總部溫度
           const hkTemp = reportData.temperature.data.find(t => t.place === '香港天文台') || reportData.temperature.data[0];
           document.getElementById('weatherTemp').textContent = `${hkTemp.value}°C`;
         }
@@ -622,7 +601,6 @@
         }
         document.getElementById('weatherDesc').textContent = weatherText;
 
-        // 天氣警告解析
         const warningsContainer = document.getElementById('weatherWarnings');
         warningsContainer.innerHTML = '';
         let hasWarning = false;
@@ -636,7 +614,6 @@
             const badge = document.createElement('span');
             badge.className = 'warn-badge ';
             
-            // 判斷警告類型並設置相應顏色
             const code = warn.code || key;
             const name = warn.name || '警告';
 
@@ -661,16 +638,15 @@
         }
 
       } catch (err) {
-        console.error('Weather fetch error:', err);
-        document.getElementById('weatherDesc').textContent = '天氣資料暫時未能載入';
+        console.error('Weather error:', err);
+        document.getElementById('weatherDesc').textContent = '天氣暫未能載入';
       }
     }
 
-    // 初始化天氣獲取，並每 5 分鐘自動更新
     fetchWeather();
     setInterval(fetchWeather, 5 * 60 * 1000);
 
-    // ========== 收藏 & 歷史 ==========
+    // ========== 收藏 & 歷史紀錄 ==========
     const LS_FAV = 'hkbus_fav_v1';
     const LS_HIST = 'hkbus_hist_v1';
     const HIST_MAX = 20;
@@ -697,8 +673,7 @@
         m.nlbRouteId || '',
         m.gmbRouteId || '',
         m.gmbRouteSeq || '',
-        m.mtrDir || '',
-        m.dirPath || ''
+        m.mtrDir || ''
       ].join('|');
     }
 
@@ -715,7 +690,6 @@
         nlbRouteId: m.nlbRouteId || null,
         gmbRouteId: m.gmbRouteId || null,
         gmbRouteSeq: m.gmbRouteSeq || null,
-        dirPath: m.dirPath || null,
         mtrDir: m.mtrDir || '',
         at: Date.now()
       };
@@ -771,12 +745,10 @@
         bound: state.bound,
         serviceType: state.serviceType || '1',
         label: state.directionLabel || '',
-        sub: '',
         dest: state.directionLabel || '',
         nlbRouteId: state.nlbRouteId,
         gmbRouteId: state.gmbRouteId,
         gmbRouteSeq: state.gmbRouteSeq,
-        dirPath: state.dirPath,
         mtrDir: state.mtrDir || ''
       };
     }
@@ -795,32 +767,29 @@
 
     function toggleFavFromStops() {
       if (!state.route) return;
-      const m = favItemFromState();
-      toggleFav(m, state.route);
+      toggleFav(favItemFromState(), state.route);
       updateHeaderFavBtns();
     }
-    function toggleFavFromEta() {
-      toggleFavFromStops();
-    }
+    function toggleFavFromEta() { toggleFavFromStops(); }
 
     function renderSavedItem(item, el, showStar) {
       const div = document.createElement('div');
       div.className = 'result-item';
       const plate = 'plate-' + (item.co || 'kmb');
       const destText = (item.label || '').replace(/^.*?→\s*/, '') || item.dest || item.route;
-      const coTag = (item.co === 'nlb' || item.co === 'ctb' || item.co === 'gmb' || item.co === 'mtrbus')
-        ? ' - ' + shortCo(item.co) : '';
       const starOn = isFav(item, item.route);
+      
       div.innerHTML =
         '<div class="result-num ' + plate + '">' + item.route + '</div>' +
         '<div class="result-info">' +
-          '<div class="result-dest">往 ' + destText + coTag + '</div>' +
-          '<div class="result-co">' + (CO_NAMES[item.co] || item.co || '') + (item.sub ? ' · ' + item.sub : '') + '</div>' +
+          '<div class="result-dest">往 ' + destText + '</div>' +
+          '<div class="result-co">' + (CO_NAMES[item.co] || item.co || '') + '</div>' +
         '</div>' +
         (showStar
           ? '<button class="fav-btn' + (starOn ? ' on' : '') + '" data-fav="1">' + (starOn ? '★' : '☆') + '</button>'
           : '') +
         '<div class="result-arrow">›</div>';
+
       div.addEventListener('click', e => {
         if (e.target.closest('[data-fav]')) {
           e.stopPropagation();
@@ -847,13 +816,13 @@
       const hist = getHist();
       el.innerHTML = '';
       if (!favs.length && !hist.length) {
-        el.innerHTML = '<div class="home-hint">輸入路線號碼開始搜尋<br><small style="opacity:.7">選過的路線會出現在這裡</small></div>';
+        el.innerHTML = '<div class="home-hint">輸入路線號碼開始搜尋<br><small style="opacity:.7">搜尋紀錄與收藏將會自動出現在此</small></div>';
         return;
       }
       if (favs.length) {
         const t = document.createElement('div');
         t.className = 'section-title';
-        t.innerHTML = '<span>★ 收藏</span><button class="clear-link" type="button">清除</button>';
+        t.innerHTML = '<span>★ 收藏路線</span><button class="clear-link" type="button">清除</button>';
         t.querySelector('.clear-link').onclick = clearFavs;
         el.appendChild(t);
         favs.forEach(item => renderSavedItem(item, el, true));
@@ -874,72 +843,359 @@
       co: null, route: null, bound: null, serviceType: null,
       directionLabel: null, stopId: null, stopName: null,
       nlbRouteId: null, gmbRouteId: null, gmbRouteSeq: null,
-      dirPath: null, mtrRawStop: null, mtrDir: null,
-      auto: false, timer: null
+      mtrDir: null, auto: false, timer: null
     };
 
-    let cache = { 
-      kmbRoutes: null, kmbAt: 0, 
-      nlbRoutes: null, nlbAt: 0,
-      stopNames: {}
-    };
+    let cache = { kmbRoutes: null, kmbAt: 0, nlbRoutes: null, nlbAt: 0 };
     const TTL = 30 * 60 * 1000;
 
-    // 鍵盤按鍵處理
+    // 鍵盤點擊處理
     document.getElementById('keypad').addEventListener('click', e => {
       const btn = e.target.closest('button');
       if (!btn) return;
       const k = btn.dataset.k;
       if (!k) return;
 
-      if (k === 'clear') {
-        inputVal = '';
-      } else if (k === 'back') {
-        inputVal = inputVal.slice(0, -1);
-      } else {
-        if (inputVal.length < 6) inputVal += k;
-      }
+      if (k === 'clear') inputVal = '';
+      else if (k === 'back') inputVal = inputVal.slice(0, -1);
+      else if (inputVal.length < 6) inputVal += k;
+      
       document.getElementById('routeInput').value = inputVal;
       
       if (searchTimer) clearTimeout(searchTimer);
       if (!inputVal) {
         renderHome();
       } else {
-        searchTimer = setTimeout(() => onSearchInput(inputVal), 150);
+        searchTimer = setTimeout(() => onSearchInput(inputVal), 250);
       }
     });
 
-    function shortCo(co) {
-      if (co === 'kmb') return '九巴';
-      if (co === 'lwb') return '龍運';
-      if (co === 'ctb') return '城巴';
-      if (co === 'nlb') return '嶼巴';
-      if (co === 'gmb') return '小巴';
-      if (co === 'mtrbus') return '港鐵巴士';
-      return co;
+    // ========== 路線 API 搜尋邏輯 ==========
+    async function fetchKmbRoutes() {
+      if (cache.kmbRoutes && (Date.now() - cache.kmbAt < TTL)) return cache.kmbRoutes;
+      const res = await fetch('https://data.etabus.gov.hk/v1/carpark/kmb/route'); // Fallback API URL format check
+      const data = await res.json();
+      cache.kmbRoutes = data.data || [];
+      cache.kmbAt = Date.now();
+      return cache.kmbRoutes;
     }
 
-    function onSearchInput(val) {
-      if (!val) return;
+    async function fetchNlbRoutes() {
+      if (cache.nlbRoutes && (Date.now() - cache.nlbAt < TTL)) return cache.nlbRoutes;
+      const res = await fetch('https://rt.data.gov.hk/v2/transport/nlb/route.php?action=list');
+      const data = await res.json();
+      cache.nlbRoutes = data.routes || [];
+      cache.nlbAt = Date.now();
+      return cache.nlbRoutes;
+    }
+
+    async function onSearchInput(query) {
+      query = query.trim().toUpperCase();
       const resultsEl = document.getElementById('results');
-      resultsEl.innerHTML = '<div class="loading-state">搜尋中...</div>';
-      
-      // 這裡簡化呼叫，呈現輸入搜尋邏輯
-      setTimeout(() => {
-        resultsEl.innerHTML = '<div class="empty-state">找到與「' + val + '」相關的路線</div>';
-      }, 300);
+      if (!query) { renderHome(); return; }
+
+      resultsEl.innerHTML = '<div class="loading-state">搜尋路線中...</div>';
+      const results = [];
+
+      try {
+        // 1. 九巴 / 龍運 (KMB / LWB API)
+        const kmbRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route`);
+        if (kmbRes.ok) {
+          const kmbData = await kmbRes.json();
+          const matches = (kmbData.data || []).filter(r => r.route.toUpperCase() === query);
+          matches.forEach(r => {
+            const co = isLWB(r.route) ? 'lwb' : 'kmb';
+            results.push({
+              co: co,
+              route: r.route,
+              bound: r.bound === 'O' ? 'outbound' : 'inbound',
+              serviceType: r.service_type,
+              label: `${r.orig_tc} → ${r.dest_tc}`,
+              dest: r.dest_tc
+            });
+          });
+        }
+
+        // 2. 城巴 (Citybus API)
+        const ctbRes = await fetch(`https://data.etabus.gov.hk/v1/transport/citybus-nwfb/route/ctb/${query}`);
+        if (ctbRes.ok) {
+          const ctbData = await ctbRes.json();
+          if (ctbData.data) {
+            results.push({
+              co: 'ctb',
+              route: ctbData.data.route,
+              bound: 'outbound',
+              label: `${ctbData.data.orig_tc} → ${ctbData.data.dest_tc}`,
+              dest: ctbData.data.dest_tc
+            });
+            results.push({
+              co: 'ctb',
+              route: ctbData.data.route,
+              bound: 'inbound',
+              label: `${ctbData.data.dest_tc} → ${ctbData.data.orig_tc}`,
+              dest: ctbData.data.orig_tc
+            });
+          }
+        }
+
+        // 3. 新大嶼山巴士 (NLB)
+        const nlbList = await fetchNlbRoutes();
+        const nlbMatches = nlbList.filter(r => r.routeName.toUpperCase() === query);
+        nlbMatches.forEach(r => {
+          results.push({
+            co: 'nlb',
+            route: r.routeName,
+            nlbRouteId: r.routeId,
+            label: `${r.routeName_tc}`,
+            dest: r.routeName_tc.split('>')?.[1]?.trim() || r.routeName_tc
+          });
+        });
+
+        // 4. 專線小巴 (GMB API)
+        const gmbRes = await fetch(`https://data.etagmb.gov.hk/route/search?q=${query}`);
+        if (gmbRes.ok) {
+          const gmbData = await gmbRes.json();
+          if (gmbData.data && gmbData.data.length > 0) {
+            gmbData.data.forEach(r => {
+              if (r.code.toUpperCase() === query) {
+                (r.directions || []).forEach(d => {
+                  results.push({
+                    co: 'gmb',
+                    route: r.code,
+                    gmbRouteId: r.route_id,
+                    gmbRouteSeq: d.route_seq,
+                    label: `${d.orig_tc} → ${d.dest_tc}`,
+                    dest: d.dest_tc
+                  });
+                });
+              }
+            });
+          }
+        }
+
+      } catch (err) {
+        console.error('Search error:', err);
+      }
+
+      // 渲染搜尋結果
+      resultsEl.innerHTML = '';
+      if (results.length === 0) {
+        resultsEl.innerHTML = `<div class="empty-state">找不到路線「${query}」</div>`;
+      } else {
+        results.forEach(item => renderSavedItem(item, resultsEl, true));
+      }
+    }
+
+    // ========== 選擇路線並載入車站清單 ==========
+    async function selectRoute(item, route) {
+      state.co = item.co;
+      state.route = route;
+      state.bound = item.bound;
+      state.serviceType = item.serviceType || '1';
+      state.directionLabel = item.label;
+      state.nlbRouteId = item.nlbRouteId;
+      state.gmbRouteId = item.gmbRouteId;
+      state.gmbRouteSeq = item.gmbRouteSeq;
+
+      addHistory(item, route);
+      document.getElementById('stopsTitle').textContent = `${route} (${CO_NAMES[item.co] || ''})`;
+      updateHeaderFavBtns();
+      goStops();
+
+      const listEl = document.getElementById('stopList');
+      listEl.innerHTML = '<div class="loading-state">載入車站清單中...</div>';
+
+      try {
+        let stops = [];
+
+        if (item.co === 'kmb' || item.co === 'lwb') {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${item.bound}/${item.serviceType}`);
+          const data = await res.json();
+          const rawStops = data.data || [];
+
+          for (const s of rawStops) {
+            const stopRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`);
+            const stopData = await stopRes.json();
+            stops.push({
+              seq: s.seq,
+              stopId: s.stop,
+              name: stopData.data ? stopData.data.name_tc : `車站 ${s.stop}`
+            });
+          }
+        } else if (item.co === 'ctb') {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/citybus-nwfb/route-stop/ctb/${route}/${item.bound}`);
+          const data = await res.json();
+          const rawStops = data.data || [];
+
+          for (const s of rawStops) {
+            const stopRes = await fetch(`https://data.etabus.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`);
+            const stopData = await stopRes.json();
+            stops.push({
+              seq: s.seq,
+              stopId: s.stop,
+              name: stopData.data ? stopData.data.name_tc : `車站 ${s.stop}`
+            });
+          }
+        } else if (item.co === 'nlb') {
+          const res = await fetch(`https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=list&routeId=${item.nlbRouteId}`);
+          const data = await res.json();
+          stops = (data.stops || []).map((s, idx) => ({
+            seq: idx + 1,
+            stopId: s.stopId,
+            name: s.stopName_tc
+          }));
+        } else if (item.co === 'gmb') {
+          const res = await fetch(`https://data.etagmb.gov.hk/route-stop/${item.gmbRouteId}/${item.gmbRouteSeq}`);
+          const data = await res.json();
+          stops = (data.data?.stops || []).map((s, idx) => ({
+            seq: idx + 1,
+            stopId: s.stop_id,
+            name: s.name_tc
+          }));
+        }
+
+        listEl.innerHTML = '';
+        if (stops.length === 0) {
+          listEl.innerHTML = '<div class="empty-state">暫無車站資料</div>';
+          return;
+        }
+
+        stops.forEach(s => {
+          const div = document.createElement('div');
+          div.className = 'stop-item';
+          div.innerHTML = `
+            <div class="stop-seq">${s.seq}</div>
+            <div class="stop-name">${s.name}</div>
+            <div class="stop-arrow">›</div>
+          `;
+          div.onclick = () => selectStop(s);
+          listEl.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('Stop list error:', err);
+        listEl.innerHTML = '<div class="error-state">載入車站時發生錯誤，請稍後重試</div>';
+      }
+    }
+
+    // ========== 選擇車站並獲取 ETA ==========
+    function selectStop(stop) {
+      state.stopId = stop.stopId;
+      state.stopName = stop.name;
+
+      document.getElementById('etaRoute').textContent = state.route;
+      document.getElementById('etaRoute').className = `eta-route-num plate-${state.co}`;
+      document.getElementById('etaDest').textContent = `往 ${state.directionLabel || ''}`;
+      document.getElementById('etaStopName').textContent = `📍 ${stop.name}`;
+      document.getElementById('etaCo').textContent = CO_NAMES[state.co] || state.co;
+
+      updateHeaderFavBtns();
+      goEta();
+      fetchETA();
+    }
+
+    async function fetchETA() {
+      const rowsEl = document.getElementById('etaRows');
+      const infoEl = document.getElementById('etaInfo');
+      rowsEl.innerHTML = '<div class="loading-state">更新到站時間中...</div>';
+
+      try {
+        let etas = [];
+
+        if (state.co === 'kmb' || state.co === 'lwb') {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${state.stopId}/${state.route}/${state.serviceType}`);
+          const data = await res.json();
+          etas = (data.data || []).filter(e => e.dir === (state.bound === 'outbound' ? 'O' : 'I')).map(e => ({
+            time: e.eta,
+            remark: e.rmk_tc
+          }));
+        } else if (state.co === 'ctb') {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/citybus-nwfb/eta/ctb/${state.stopId}/${state.route}`);
+          const data = await res.json();
+          etas = (data.data || []).map(e => ({
+            time: e.eta,
+            remark: e.rmk_tc
+          }));
+        } else if (state.co === 'gmb') {
+          const res = await fetch(`https://data.etagmb.gov.hk/eta/route-stop/${state.gmbRouteId}/${state.gmbRouteSeq}/${state.stopId}`);
+          const data = await res.json();
+          etas = (data.data?.etas || []).map(e => ({
+            time: e.timestamp,
+            remark: e.remarks_tc
+          }));
+        }
+
+        rowsEl.innerHTML = '';
+        const now = Date.now();
+
+        if (etas.length === 0 || etas.every(e => !e.time)) {
+          rowsEl.innerHTML = '<div class="eta-empty">未有即時班次資料</div>';
+        } else {
+          etas.forEach(e => {
+            if (!e.time) return;
+            const etaTime = new Date(e.time).getTime();
+            const diffMins = Math.floor((etaTime - now) / 60000);
+
+            let displayMin = `${diffMins} 分鐘`;
+            let statusClass = '';
+
+            if (diffMins <= 0) {
+              displayMin = '即將到達 / 已到站';
+              statusClass = 'arrived';
+            } else if (diffMins <= 3) {
+              statusClass = 'soon';
+            }
+
+            const div = document.createElement('div');
+            div.className = 'eta-row';
+            div.innerHTML = `
+              <div class="eta-mins ${statusClass}">${displayMin}</div>
+              <div class="eta-clock">${new Date(e.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ${e.remark ? `<br><small>${e.remark}</small>` : ''}</div>
+            `;
+            rowsEl.appendChild(div);
+          });
+        }
+
+        infoEl.textContent = `上次更新時間: ${new Date().toLocaleTimeString()}`;
+
+      } catch (err) {
+        console.error('ETA error:', err);
+        rowsEl.innerHTML = '<div class="error-state">未能載入到站時間</div>';
+      }
+    }
+
+    function toggleAuto() {
+      state.auto = !state.auto;
+      const btn = document.getElementById('btnAuto');
+      if (state.auto) {
+        btn.textContent = '⏸ 停止自動刷新';
+        btn.style.background = '#34c759';
+        btn.style.color = '#fff';
+        state.timer = setInterval(fetchETA, 15000);
+      } else {
+        btn.textContent = '▶ 自動刷新';
+        btn.style.background = '#f2f2f7';
+        btn.style.color = 'inherit';
+        if (state.timer) clearInterval(state.timer);
+      }
     }
 
     function goSearch() {
+      if (state.timer) clearInterval(state.timer);
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('pageSearch').classList.add('active');
     }
     function goStops() {
+      if (state.timer) clearInterval(state.timer);
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('pageStops').classList.add('active');
     }
+    function goEta() {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('pageEta').classList.add('active');
+    }
 
-    // 初始化渲染首頁
+    // 頁面初始化
     renderHome();
   </script>
 </body>
