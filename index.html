@@ -1,608 +1,130 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>香港巴士到站時間</title>
-  <style>
-    :root {
-      --primary: #00A0E9;
-      --bg: #f2f2f7;
-      --card: #ffffff;
-      --text: #1c1c1e;
-      --muted: #8e8e93;
-      --border: #e5e5ea;
-      --green: #34c759;
-      --amber: #ff9500;
-      --red: #ff3b30;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow: hidden;
-    }
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      background: var(--bg);
-      position: relative;
-    }
-
-    /* Header */
-    .header {
-      background: var(--primary);
-      color: white;
-      text-align: center;
-      padding: 14px 16px 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      flex-shrink: 0;
-      letter-spacing: 1px;
-    }
-
-    /* Search input area */
-    .search-box {
-      background: white;
-      padding: 12px 16px;
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .search-input {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 1.2rem;
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      outline: none;
-      background: #fafafa;
-      font-family: inherit;
-      letter-spacing: 1px;
-      text-align: center;
-      font-weight: 600;
-    }
-    .search-input:focus { border-color: var(--primary); background: white; }
-    .search-input::placeholder { color: #c7c7cc; font-weight: 400; letter-spacing: 0; }
-
-    /* Results list */
-    .results {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: white;
-    }
-    .result-item {
-      display: flex;
-      align-items: center;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      gap: 12px;
-      transition: background 0.1s;
-    }
-    .result-item:active { background: #f2f2f7; }
-    
-    .result-num {
-      font-size: 1.725rem;
-      font-weight: 700;
-      min-width: 64px;
-      text-align: center;
-      padding: 4px 10px;
-      border-radius: 6px;
-      letter-spacing: 0.5px;
-      line-height: 1.1;
-    }
-    
-    /* 路線牌 house color (整合兩處重複定義) */
-    .plate-kmb { background: #E4002B; color: #fff; }          /* 九巴紅 */
-    .plate-lwb { background: #F15A22; color: #fff; }          /* 龍運橙 */
-    .plate-ctb { background: #FFD100; color: #1a1a1a; }       /* 城巴黃 */
-    .plate-nlb { background: #007A3D; color: #fff; }          /* 嶼巴綠 */
-    .plate-gmb { background: #00A651; color: #fff; }          /* 小巴綠 */
-    .plate-mtrbus { background: #0077C8; color: #fff; }       /* 港鐵藍 */
-
-    .result-info { flex: 1; min-width: 0; }
-    .result-dest {
-      font-size: 0.98rem;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .result-co {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-    .result-arrow {
-      color: #c7c7cc;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-    .empty-state, .loading-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    /* Keypad */
-    .keypad {
-      flex-shrink: 0;
-      background: #5a6570;
-      padding: 8px 6px 10px;
-      user-select: none;
-    }
-    .key-row {
-      display: flex;
-      gap: 5px;
-      margin-bottom: 5px;
-      justify-content: center;
-    }
-    .key-row:last-child { margin-bottom: 0; }
-    .key {
-      flex: 1;
-      max-width: 72px;
-      height: 46px;
-      border: none;
-      border-radius: 8px;
-      background: white;
-      font-size: 1.35rem;
-      font-weight: 500;
-      color: var(--text);
-      cursor: pointer;
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-      transition: background 0.08s, transform 0.05s;
-    }
-    .key:active {
-      background: #d1d1d6;
-      transform: scale(0.96);
-    }
-    .key-letter {
-      flex: 0 0 42px;
-      max-width: 48px;
-      height: 42px;
-      border-radius: 50%;
-      font-size: 1.05rem;
-      background: #d8dce0;
-      color: #1c1c1e;
-    }
-    .key-letter:active { background: #b0b6bc; }
-    .key-func {
-      background: #8e99a4;
-      color: white;
-      font-size: 1.1rem;
-    }
-    .key-func:active { background: #6d7883; }
-    .keypad-main {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-    }
-    .num-pad {
-      flex: 1.15;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .letter-pad {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    /* Sub pages */
-    .page { display: none; flex-direction: column; height: 100%; }
-    .page.active { display: flex; }
-
-    .page-header {
-      background: var(--primary);
-      color: white;
-      display: flex;
-      align-items: center;
-      padding: 12px 8px;
-      flex-shrink: 0;
-      gap: 4px;
-    }
-    .back-btn {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 1.4rem;
-      padding: 4px 10px;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .page-title {
-      flex: 1;
-      text-align: center;
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin-right: 36px;
-    }
-
-    .stop-list, .eta-area {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: white;
-    }
-    .stop-item {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .stop-item:active { background: #f2f2f7; }
-
-    /* ETA board */
-    .eta-header-info {
-      background: #1c1c1e;
-      color: white;
-      padding: 16px;
-    }
-    .eta-route-num {
-      font-size: 2.1rem;
-      font-weight: 700;
-      display: inline-block;
-      padding: 4px 14px;
-      border-radius: 6px;
-      letter-spacing: 0.5px;
-      line-height: 1.1;
-    }
-    .eta-dest-text { font-size: 0.95rem; color: #aeaeb2; margin-top: 4px; }
-    .eta-stop-text { font-size: 0.9rem; margin-top: 8px; }
-    .eta-co-badge {
-      display: inline-block;
-      background: #3a3a3c;
-      padding: 2px 8px;
-      border-radius: 5px;
-      font-size: 0.72rem;
-      margin-top: 6px;
-    }
-    .eta-rows { padding: 8px 0; }
-    .eta-mins {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--green);
-      font-variant-numeric: tabular-nums;
-    }
-    .eta-mins.soon { color: var(--amber); }
-    .eta-mins.arrived { color: var(--red); }
-    .eta-toolbar {
-      display: flex;
-      gap: 8px;
-      padding: 12px 16px;
-      background: white;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .eta-btn {
-      flex: 1;
-      padding: 11px;
-      border: none;
-      border-radius: 10px;
-      background: #f2f2f7;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .eta-btn:active { background: #e5e5ea; }
-    .eta-refresh-info {
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--muted);
-      padding: 6px 16px 10px;
-      background: white;
-    }
-
-    /* Favorites & History */
-    .section-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 16px 6px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      background: #fafafa;
-      border-bottom: 1px solid var(--border);
-    }
-    .section-title .clear-link {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 0.75rem;
-      font-weight: 500;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 2px 4px;
-    }
-    .fav-btn {
-      background: none;
-      border: none;
-      font-size: 1.25rem;
-      cursor: pointer;
-      padding: 4px 6px;
-      line-height: 1;
-      flex-shrink: 0;
-      color: #c7c7cc;
-      transition: color 0.15s, transform 0.1s;
-    }
-    .fav-btn.on { color: #ff9500; }
-    .fav-btn:active { transform: scale(0.9); }
-    .result-item .fav-btn { margin-left: auto; }
-    .home-hint {
-      text-align: center;
-      padding: 28px 20px 12px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .page-header .fav-btn {
-      color: rgba(255,255,255,0.7);
-      font-size: 1.3rem;
-      margin-right: 4px;
-    }
-    .page-header .fav-btn.on { color: #ffd60a; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>全港巴士ETA - 最終版 多啦A夢藍</title>
+<style>
+:root{--dora:#00a0e9;--dora-dark:#0089c9;--kmb:#d81e26;--lwb:#ff7a00;--ctb:#1e8c45;--gmb-kln:#00a99d;--gmb-nt:#8e7cc3;--gmb-hk:#5dade2;--mtr:#0a58ca;--red:#c63a44}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang HK",sans-serif;background:#f2f3f5;display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;min-height:100vh;background:#fff;display:flex;flex-direction:column;position:relative;border-left:1px solid #ddd;border-right:1px solid #ddd}
+.status{display:flex;justify-content:space-between;padding:6px 16px 2px;font-size:13px;font-weight:700}
+.app-header{background:linear-gradient(to bottom,#3db9ff,#0a8ae0);color:#fff;text-align:center;padding:12px 0 14px;font-size:18px;font-weight:800;letter-spacing:2px}
+.top-header-red{background:var(--red);color:#fff;text-align:center;padding:14px 0 12px;font-size:18px;font-weight:800;letter-spacing:4px}
+.search-wrap{padding:10px 12px;background:#eef2f7;display:flex;gap:8px}
+.search-box{flex:1;background:#fff;border:none;border-radius:8px;padding:11px 12px;text-align:center;font-size:15px;outline:none;box-shadow:inset 0 0 0 1px #ddd}
+.btn{border:none;border-radius:8px;padding:10px 12px;font-weight:700;font-size:12px;cursor:pointer}
+.btn-gps{background:var(--dora);color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:5px;padding:6px 12px;background:#fff}
+.legend span{font-size:9px;padding:3px 6px;border-radius:4px;color:#fff;font-weight:700}
+.results{flex:1;overflow-y:auto;padding:10px;background:#f5f6f8;min-height:200px}
+.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;display:flex;gap:10px;border-left:6px solid var(--kmb);box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;position:relative}
+.card.kmb{border-color:var(--kmb)}.card.lwb{border-color:var(--lwb)}.card.ctb,.card.nlb{border-color:var(--ctb)}.card.gmb-kln{border-color:var(--gmb-kln)}.card.gmb-nt{border-color:var(--gmb-nt)}.card.gmb-hk{border-color:var(--gmb-hk)}.card.mtr{border-color:var(--mtr)}
+.badge{font-size:11px;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700;display:inline-block;margin-bottom:4px}
+.badge.kmb{background:var(--kmb)}.badge.lwb{background:var(--lwb)}.badge.ctb,.badge.nlb{background:var(--ctb)}.badge.gmb-kln{background:var(--gmb-kln)}.badge.gmb-nt{background:var(--gmb-nt)}.badge.gmb-hk{background:var(--gmb-hk)}.badge.mtr{background:var(--mtr)}
+.route-no{font-size:21px;font-weight:900}.dest{font-size:12px;color:#333;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eta{text-align:right;min-width:82px}.eta-main{font-size:16px;font-weight:800}.eta-sub{font-size:10px;color:#888}
+.fav-star{position:absolute;top:8px;right:8px;font-size:16px;color:#ccc;cursor:pointer}.fav-star.on{color:#ffca28}
+.hint{text-align:center;color:#8a8f98;font-size:13px;line-height:1.6;padding:28px 20px}
+.kbd-wrap{background:#5a6a82;padding:8px 8px 6px}.kbd{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.key{background:#fff;border:none;border-radius:8px;height:42px;font-size:16px;font-weight:800}.key.letter{background:#f5f5f5;border-radius:50%;width:40px;justify-self:center;font-size:14px}
+.tabbar{display:flex;background:#fff;border-top:1px solid #ddd;padding:6px 0} .tab{flex:1;text-align:center;font-size:11px;color:#777;cursor:pointer} .tab.active{color:var(--red)} .tab i{display:block;font-style:normal;font-size:18px}
+.nearby-wrapper{display:flex;flex-direction:column;flex:1;background:var(--dora);overflow:hidden}
+.near-strip{background:#d1d3d6;display:flex;align-items:center;padding:10px;gap:10px}
+.person{width:56px;flex-shrink:0;text-align:center} .person-icon{font-size:28px;color:var(--red)}
+.you-here{background:var(--red);color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin:4px auto 0;line-height:1.1;border:2px solid #fff}
+.walk-row{background:#d1d3d6;padding:0 10px 8px;display:flex;gap:8px;align-items:center}
+.walk-badge{background:#e6e8ea;border-radius:50%;width:42px;height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#555;border:1px solid #bbb}
+.stops-scroll{display:flex;gap:8px;overflow-x:auto;flex:1;padding-bottom:4px;scrollbar-width:none} .stops-scroll::-webkit-scrollbar{display:none}
+.stop-btn{background:#8a8e93;color:#fff;border:none;border-radius:10px;min-width:56px;height:54px;padding:4px 6px;font-weight:800;font-size:12px;line-height:1.2;cursor:pointer;flex-shrink:0} .stop-btn.active{background:#222;box-shadow:0 0 0 3px #fff}
+.station-bar{background:#2f3542;color:#fff;text-align:center;padding:9px;font-size:15px;font-weight:700}
+.route-list-white{background:#fff;flex:1;overflow-y:auto;min-height:280px}
+.route-row{display:flex;align-items:center;padding:14px 12px;border-bottom:1px solid #e9e9e9;cursor:pointer} .route-row.dim{opacity:.45}
+.dora-bottom{background:var(--dora);padding:16px 12px;display:flex;justify-content:center}
+.pill-group{background:rgba(255,255,255,.9);border-radius:30px;display:flex;padding:5px;gap:5px}
+.pill-btn{border:none;background:#b9bec3;color:#555;border-radius:24px;padding:8px 16px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:80px;cursor:pointer} .pill-btn.active{background:#3a4a5a;color:#fff}
+.info-bar{background:#1e2228;color:#aaa;display:flex;justify-content:space-between;padding:5px 10px;font-size:10px}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;z-index:30;align-items:flex-end} .modal.show{display:flex}
+.sheet{width:100%;background:#fff;border-radius:18px 18px 0 0;max-height:90vh;display:flex;flex-direction:column} .sheet-head{padding:12px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;font-weight:800} .stop-list{overflow:auto} .stop{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #f3f3f3;font-size:13px}
+</style>
 </head>
 <body>
-  <div class="app">
-
-    <!-- PAGE: SEARCH -->
-    <div class="page active" id="pageSearch">
-      <div class="header">搜尋</div>
-      <div class="search-box">
-        <input type="text" class="search-input" id="routeInput" placeholder="輸入路線號碼" readonly inputmode="none">
-      </div>
-      <div class="results" id="results">
-        <div class="empty-state">輸入路線號碼開始搜尋</div>
-      </div>
-      <div class="keypad" id="keypad">
-        <div class="keypad-main">
-          <div class="num-pad">
-            <div class="key-row">
-              <button class="key" data-k="1">1</button>
-              <button class="key" data-k="2">2</button>
-              <button class="key" data-k="3">3</button>
-            </div>
-            <div class="key-row">
-              <button class="key" data-k="4">4</button>
-              <button class="key" data-k="5">5</button>
-              <button class="key" data-k="6">6</button>
-            </div>
-            <div class="key-row">
-              <button class="key" data-k="7">7</button>
-              <button class="key" data-k="8">8</button>
-              <button class="key" data-k="9">9</button>
-            </div>
-            <div class="key-row">
-              <button class="key key-func" data-k="clear">✕</button>
-              <button class="key" data-k="0">0</button>
-              <button class="key key-func" data-k="back">⌫</button>
-            </div>
-          </div>
-          <div class="letter-pad" id="letterKeys">
-            <div class="key-row"><button class="key key-letter" data-k="A">A</button><button class="key key-letter" data-k="B">B</button><button class="key key-letter" data-k="C">C</button><button class="key key-letter" data-k="D">D</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="E">E</button><button class="key key-letter" data-k="F">F</button><button class="key key-letter" data-k="H">H</button><button class="key key-letter" data-k="K">K</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="M">M</button><button class="key key-letter" data-k="N">N</button><button class="key key-letter" data-k="P">P</button><button class="key key-letter" data-k="R">R</button></div>
-            <div class="key-row"><button class="key key-letter" data-k="S">S</button><button class="key key-letter" data-k="T">T</button><button class="key key-letter" data-k="W">W</button><button class="key key-letter" data-k="X">X</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAGE: STOPS -->
-    <div class="page" id="pageStops">
-      <div class="page-header">
-        <button class="back-btn" onclick="goSearch()">‹</button>
-        <div class="page-title" id="stopsTitle">選擇車站</div>
-        <button class="fav-btn" id="stopsFavBtn" onclick="toggleFavFromStops()" title="收藏此路線">☆</button>
-      </div>
-      <div class="stop-list" id="stopList">
-        <div class="loading-state">載入車站中...</div>
-      </div>
-    </div>
-
-    <!-- PAGE: ETA -->
-    <div class="page" id="pageEta">
-      <div class="page-header">
-        <button class="back-btn" onclick="goStops()">‹</button>
-        <div class="page-title">預計到站</div>
-        <button class="fav-btn" id="etaFavBtn" onclick="toggleFavFromEta()" title="收藏此路線">☆</button>
-      </div>
-      <div class="eta-area" id="etaArea">
-        <div class="eta-header-info">
-          <div class="eta-route-num" id="etaRoute">—</div>
-          <div class="eta-dest-text" id="etaDest">—</div>
-          <div class="eta-stop-text" id="etaStopName">—</div>
-          <div class="eta-co-badge" id="etaCo">—</div>
-        </div>
-        <div class="eta-rows" id="etaRows"></div>
-        <div class="eta-refresh-info" id="etaInfo"></div>
-      </div>
-      <div class="eta-toolbar">
-        <button class="eta-btn" onclick="fetchETA()">🔄 刷新</button>
-        <button class="eta-btn" id="btnAuto" onclick="toggleAuto()">▶ 自動刷新</button>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    const CO_NAMES = { kmb: '九巴', lwb: '龍運', ctb: '城巴', nlb: '嶼巴（大嶼山巴士）', gmb: '專線小巴', mtrbus: '港鐵巴士' };
-    const LS_FAV = 'hkbus_fav_v1', LS_HIST = 'hkbus_hist_v1';
-    const HIST_MAX = 20, FAV_MAX = 30;
-
-    function loadJSON(key, fallback) {
-      try {
-        const s = localStorage.getItem(key);
-        return s ? JSON.parse(s) : fallback;
-      } catch { return fallback; }
-    }
-    function saveJSON(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-    }
-
-    function routeKey(m, route) {
-      return [(route || m.route || '').toUpperCase(), m.co || '', m.bound || '', m.serviceType || '1', m.nlbRouteId || '', m.gmbRouteId || '', m.gmbRouteSeq || '', m.mtrDir || '', m.dirPath || ''].join('|');
-    }
-
-    function snapshotRoute(m, route) {
-      return {
-        key: routeKey(m, route),
-        route: (route || m.route || '').toUpperCase(),
-        co: m.co, bound: m.bound, serviceType: m.serviceType || '1',
-        label: m.label || '', sub: m.sub || '', dest: m.dest || '',
-        nlbRouteId: m.nlbRouteId || null, gmbRouteId: m.gmbRouteId || null, gmbRouteSeq: m.gmbRouteSeq || null,
-        dirPath: m.dirPath || null, mtrDir: m.mtrDir || '', at: Date.now()
-      };
-    }
-
-    function getFavs() { return loadJSON(LS_FAV, []); }
-    function getHist() { return loadJSON(LS_HIST, []); }
-
-    function isFav(m, route) {
-      return getFavs().some(f => f.key === routeKey(m, route));
-    }
-
-    function toggleFav(m, route) {
-      let list = getFavs();
-      const k = routeKey(m, route);
-      const idx = list.findIndex(f => f.key === k);
-      if (idx >= 0) list.splice(idx, 1);
-      else {
-        list.unshift(snapshotRoute(m, route));
-        if (list.length > FAV_MAX) list = list.slice(0, FAV_MAX);
-      }
-      saveJSON(LS_FAV, list);
-      return idx < 0;
-    }
-
-    function clearHistory() {
-      saveJSON(LS_HIST, []);
-      renderHome();
-    }
-
-    function clearFavs() {
-      if (!confirm('確定清除全部收藏？')) return;
-      saveJSON(LS_FAV, []);
-      renderHome();
-      updateHeaderFavBtns();
-    }
-
-    function favItemFromState() {
-      return {
-        route: state.route, co: state.co, bound: state.bound,
-        serviceType: state.serviceType || '1', label: state.directionLabel || '', sub: '',
-        dest: state.directionLabel || '', nlbRouteId: state.nlbRouteId,
-        gmbRouteId: state.gmbRouteId, gmbRouteSeq: state.gmbRouteSeq,
-        dirPath: state.dirPath, mtrDir: state.mtrDir || ''
-      };
-    }
-
-    function updateHeaderFavBtns() {
-      if (!state.route || !state.co) return;
-      const on = isFav(favItemFromState(), state.route);
-      ['stopsFavBtn', 'etaFavBtn'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) {
-          btn.textContent = on ? '★' : '☆';
-          btn.classList.toggle('on', on);
-        }
-      });
-    }
-
-    function toggleFavFromStops() {
-      if (!state.route) return;
-      toggleFav(favItemFromState(), state.route);
-      updateHeaderFavBtns();
-    }
-    function toggleFavFromEta() { toggleFavFromStops(); }
-
-    function renderSavedItem(item, el, showStar) {
-      const div = document.createElement('div');
-      div.className = 'result-item';
-      const plate = 'plate-' + (item.co || 'kmb');
-      const destText = (item.label || '').replace(/^.*?→\s*/, '') || item.dest || item.route;
-      const starOn = isFav(item, item.route);
-      div.innerHTML = `
-        <div class="result-num ${plate}">${item.route}</div>
-        <div class="result-info">
-          <div class="result-dest">往 ${destText}</div>
-          <div class="result-co">${CO_NAMES[item.co] || item.co || ''}${item.sub ? ' · ' + item.sub : ''}</div>
-        </div>
-        ${showStar ? `<button class="fav-btn${starOn ? ' on' : ''}" data-fav="1">${starOn ? '★' : '☆'}</button>` : ''}
-        <div class="result-arrow">›</div>`;
-      div.addEventListener('click', e => {
-        if (e.target.closest('[data-fav]')) {
-          e.stopPropagation();
-          toggleFav(item, item.route);
-          renderHome();
-          return;
-        }
-        selectRoute(item, item.route);
-      });
-      el.appendChild(div);
-    }
-
-    function renderHome() {
-      const el = document.getElementById('results');
-      const favs = getFavs(), hist = getHist();
-      el.innerHTML = '';
-      if (!favs.length && !hist.length) {
-        el.innerHTML = '<div class="home-hint">輸入路線號碼開始搜尋<br><small style="opacity:.7">選過的路線會出現在這裡</small></div>';
-        return;
-      }
-      if (favs.length) {
-        const t = document.createElement('div');
-        t.className = 'section-title';
-        t.innerHTML = '<span>★ 收藏</span><button class="clear-link" type="button">清除</button>';
-        t.querySelector('.clear-link').onclick = clearFavs;
-        el.appendChild(t);
-        favs.forEach(item => renderSavedItem(item, el, true));
-      }
-      if (hist.length) {
-        const t = document.createElement('div');
-        t.className = 'section-title';
-        t.innerHTML = '<span>最近搜尋</span><button class="clear-link" type="button">清除</button>';
-        t.querySelector('.clear-link').onclick = clearHistory;
-        el.appendChild(t);
-        hist.forEach(item => renderSavedItem(item, el, true));
-      }
-    }
-
-    let state = {
-      co: null, route: null, bound: null, serviceType: null,
-      directionLabel: null, stopId: null, stopName: null,
-      nlbRouteId: null, gmbRouteId: null, gmbRouteSeq: null,
-      dirPath: null, mtrRawStop: null, mtrDir: null,
-      auto: false, timer: null
-    };
-
-    // 清理後的專線小巴路線索引資料
-    const GMB_ROUTE_INDEX = {
-      "1": [{"r":"HKI","id":2006408,"c":"1","d":[{"s":1,"o":"山頂(公共交通總站)","t":"中環(香港站公共運輸交匯處)"},{"s":2,"o":"中環(香港站公共運輸交匯處)","t":"山頂(公共交通總站)"}]}],
-      "10": [{"r":"HKI","id":2006706,"c":"10","d":[{"s":1,"o":"銅鑼灣(謝斐道)","t":"數碼港公共運輸交匯處"},{"s":2,"o":"數碼港巴士總站","t":"謝斐道, 近兆安廣場"}]}],
-      "10P": [{"r":"HKI","id":2006739,"c":"10P","d":[{"s":1,"o":"謝斐道, 近兆安廣場","t":"數碼港巴士總站"},{"s":2,"o":"數碼港巴士總站","t":"謝斐道, 近兆安廣場"}]}]
-    };
-
-    // 初始化頁面
-    renderHome();
-  </script>
+<div class="phone">
+<div class="status"><span id="clock">00:15 🚌</span><span>☀ 96</span></div>
+<div id="mainHeader" class="app-header">搜尋 - 真實ETA</div>
+<div id="searchPanel">
+  <div class="search-wrap"><input id="q" class="search-box" placeholder="輸入路線 如 1A / K73 / B2 / 4A" /><button class="btn btn-gps" onclick="switchTab('nearby')">📍 附近</button></div>
+  <div class="legend"><span style="background:#d81e26">九巴-紅</span><span style="background:#ff7a00">龍運-橙</span><span style="background:#1e8c45">城巴/嶼巴-綠</span><span style="background:#00a99d">九龍小巴</span><span style="background:#8e7cc3">新界小巴</span><span style="background:#5dade2">港島小巴</span><span style="background:#0a58ca">港鐵巴士</span></div>
+  <div id="results" class="results"><div class="hint">已接駁6大官方ETA<br>📍 附近用GPS搵最近車站<br>☆ 收藏常用路線<br>輸入路線號碼開始</div></div>
+  <div class="kbd-wrap"><div class="kbd" id="kbd"></div></div>
+</div>
+<div id="nearbyPanel" style="display:none;flex:1;flex-direction:column">
+  <div class="top-header-red">鄰近</div>
+  <div class="near-strip"><div class="person"><div class="person-icon">🚶</div><div class="you-here">你在<br>此</div></div><div class="stops-scroll" id="stopsScroll"></div></div>
+  <div class="walk-row"><div class="walk-badge" id="walkBadge">--</div><div style="flex:1"></div><button onclick="locateNearby()" style="border:none;background:#fff;border-radius:16px;padding:6px 10px;font-size:11px;font-weight:700">重新定位</button></div>
+  <div class="station-bar" id="stationBar">定位中...</div>
+  <div id="nearbyList" class="route-list-white"><div class="hint">📍 正在定位附近車站...</div></div>
+  <div class="dora-bottom"><div class="pill-group"><button class="pill-btn active">📍 鄰近車站</button><button class="pill-btn" onclick="alert('車站搜尋')">🔍 車站搜尋</button><button class="pill-btn" onclick="alert('鄰近地標')">📍 鄰近地標</button></div></div>
+</div>
+<div class="info-bar"><div id="apiStatus">● 載入中</div><div>真實ETA · 30秒更新</div></div>
+<div class="tabbar">
+  <div class="tab" data-tab="home" onclick="switchTab('home')"><i>⌂</i>主頁</div>
+  <div class="tab" data-tab="fav" onclick="switchTab('fav')"><i>☆</i>收藏</div>
+  <div class="tab active" data-tab="search" onclick="switchTab('search')"><i>🔍</i>搜尋</div>
+  <div class="tab" data-tab="nearby" onclick="switchTab('nearby')"><i>📍</i>鄰近</div>
+  <div class="tab" data-tab="game"><i>⛶</i>遊戲</div>
+</div>
+<div id="modal" class="modal" onclick="if(event.target==this)closeModal()"><div class="sheet"><div class="sheet-head"><div id="sheetTitle"></div><button onclick="closeModal()" style="border:none;background:#eee;border-radius:50%;width:28px;height:28px">✕</button></div><div id="stopList" class="stop-list"></div></div></div>
+</div>
+<script>
+const KMB_ROUTE='https://data.etabus.gov.hk/v1/transport/kmb/route/';
+const KMB_ETA='https://data.etabus.gov.hk/v1/transport/kmb/eta/';
+const KMB_STOP='https://data.etabus.gov.hk/v1/transport/kmb/stop/';
+const KMB_ROUTE_STOP='https://data.etabus.gov.hk/v1/transport/kmb/route-stop/';
+const KMB_STOP_LIST='https://data.etabus.gov.hk/v1/transport/kmb/stop';
+const KMB_STOP_ETA='https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/';
+const CTB_ROUTE='https://rt.data.gov.hk/v2/transport/citybus/route/CTB';
+const CTB_ROUTE_STOP='https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/';
+const CTB_STOP='https://rt.data.gov.hk/v2/transport/citybus/stop/';
+const CTB_ETA='https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/';
+const CTB_ETA_ALL='https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/';
+const CTB_STOP_LIST='https://rt.data.gov.hk/v2/transport/citybus/stop/CTB';
+const NLB_LIST='https://rt.data.gov.hk/v1/transport/nlb/route.php?action=list';
+const GMB_ROUTE='https://data.etagmb.gov.hk/route';
+let allMerged=[], kmbStops=[], ctbStops=[], allStops=[], favs=JSON.parse(localStorage.getItem('bus_fav')||'[]'), currentTab='search', userPos=null;
+function saveFav(){localStorage.setItem('bus_fav',JSON.stringify(favs));}
+function isFav(no){return favs.includes(no);}
+function toggleFav(no,e){e.stopPropagation();if(isFav(no))favs=favs.filter(x=>x!==no);else favs.push(no);saveFav();doSearch();}
+function hav(a,b,c,d){const R=6371e3;const toRad=x=>x*Math.PI/180;const dLat=toRad(c-a);const dLon=toRad(d-b);const s1=Math.sin(dLat/2)**2+Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(s1),Math.sqrt(1-s1));}
+function fmt(iso,rmk){if(!iso)return rmk||'暫無';const diff=(new Date(iso)-new Date())/60000;const m=Math.round(diff);if(m<=1)return'即將到達';return m+' 分鐘';}
+function fmtShort(iso){if(!iso)return'—';const d=(new Date(iso)-new Date())/60000;const m=Math.round(d);if(m<=1)return'即將';return m;}
+async function init(){
+  try{
+    const [kmbR,ctbR,nlbR,gmbR,kmbS,ctbS]=await Promise.all([
+      fetch(KMB_ROUTE).then(r=>r.json()),fetch(CTB_ROUTE).then(r=>r.json()),fetch(NLB_LIST).then(r=>r.json()),fetch(GMB_ROUTE).then(r=>r.json()),
+      fetch(KMB_STOP_LIST).then(r=>r.json()).catch(()=>({data:[]})),fetch(CTB_STOP_LIST).then(r=>r.json()).catch(()=>({data:[]}))
+    ]);
+    kmbStops=kmbS.data||[];ctbStops=(ctbS.data||[]).map(s=>({...s,lat:+s.lat,long:+s.long}));
+    allStops=[...kmbStops.map(s=>({id:s.stop,name:s.name_tc,lat:+s.lat,long:+s.long,type:'KMB'})),...ctbStops.map(s=>({id:s.stop,name:s.name_tc,lat:+s.lat,long:+s.long,type:'CTB'}))].filter(s=>!isNaN(s.lat));
+    const g=gmbR.data?.routes||{};const gmbRoutes=[...(g.HKI||[]).map(x=>({...x,region:'HKI'})),...(g.KLN||[]).map(x=>({...x,region:'KLN'})),...(g.NT||[]).map(x=>({...x,region:'NT'}))];
+    allMerged=[...kmbR.data.map(r=>({no:r.route,coName:r.route.startsWith('A')||r.route.startsWith('E')?'龍運':'九巴',cls:r.route.startsWith('A')||r.route.startsWith('E')?'lwb':'kmb',type:'KMB',raw:r,orig:r.orig_tc,dest:r.dest_tc})),...ctbR.data.map(r=>({no:r.route,coName:'城巴',cls:'ctb',type:'CTB',raw:r,orig:r.orig_tc,dest:r.dest_tc})),...(nlbR.routes||[]).map(r=>({no:r.routeNo,coName:'嶼巴',cls:'nlb',type:'NLB',raw:r,orig:r.routeName_c,dest:''})),...gmbRoutes.map(r=>({no:r.route_code,coName:r.region==='HKI'?'港島小巴':r.region==='KLN'?'九龍小巴':'新界小巴',cls:r.region==='HKI'?'gmb-hk':r.region==='KLN'?'gmb-kln':'gmb-nt',type:'GMB',raw:r,orig:r.orig_tc||'',dest:r.dest_tc||''})),...['K51','K52','K53','K54','K65','K73','K76'].map(no=>({no,coName:'港鐵巴士',cls:'mtr',type:'MTR',raw:{route:no},orig:'',dest:''}))];
+    document.getElementById('apiStatus').textContent='● 已載入 '+allMerged.length+' 線';
+  }catch(e){document.getElementById('apiStatus').textContent='載入失敗';}
+}
+const q=document.getElementById('q');const results=document.getElementById('results');const kbd=document.getElementById('kbd');
+function buildKbd(){const layout=[[{t:'1'},{t:'2'},{t:'3'},{t:''},{t:'A'},{t:'B'},{t:'C'},{t:'E'}],[{t:'4'},{t:'5'},{t:'6'},{t:''},{t:'H'},{t:'K'},{t:'N'},{t:'R'}],[{t:'7'},{t:'8'},{t:'9'},{t:''},{t:'S'},{t:'T'},{t:'W'},{t:'X'}],[{t:'×',act:'del'},{t:'0'},{t:'↩',act:'enter'},{t:''},{t:'P'},{t:'M'},{t:'D'},{t:'F'}]];layout.forEach(row=>row.forEach(cell=>{if(cell.t===''){const d=document.createElement('div');kbd.appendChild(d);return;}const b=document.createElement('button');b.className='key'+(/[A-Z]/.test(cell.t)?' letter':'');b.textContent=cell.t;b.onclick=()=>{if(cell.act==='del')q.value=q.value.slice(0,-1);else if(cell.act!=='enter'){if(q.value.length<6)q.value+=cell.t;}doSearch();};kbd.appendChild(b);}));}
+q.addEventListener('input',doSearch);
+function renderList(list,target=results){target.innerHTML='';if(list.length===0){target.innerHTML='<div class="hint">沒有結果</div>';return;}list.forEach(r=>{const card=document.createElement('div');card.className=`card ${r.cls}`;const favClass=isFav(r.no)?'fav-star on':'fav-star';card.innerHTML=`<span class="${favClass}" onclick="toggleFav('${r.no}',event)">${isFav(r.no)?'★':'☆'}</span><div style="flex:1"><span class="badge ${r.cls}">${r.coName}</span><div class="route-no">${r.no}</div><div class="dest">${r.orig||''} ➜ ${r.dest||''}</div>${r.stopName?`<div style="font-size:10px;color:#0a8ae0">📍 ${Math.round(r.dist)}米 · ${r.stopName}</div>`:''}</div><div class="eta"><div class="eta-main">${r.etaText||'點擊查'}</div><div class="eta-sub">真實ETA</div></div>`;card.onclick=()=>openRoute(r);target.appendChild(card);});}
+function doSearch(){const v=q.value.trim().toUpperCase();if(!v){results.innerHTML='<div class="hint">輸入路線號碼，例如 1A、K73、B2<br>或按 📍 附近 搵車站</div>';return;}const filtered=allMerged.filter(r=>r.no.toUpperCase().includes(v)).slice(0,30);renderList(filtered);}
+function switchTab(tab){currentTab=tab;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('searchPanel').style.display=(tab==='search'||tab==='home'||tab==='fav')?'flex':'none';document.getElementById('searchPanel').style.flexDirection='column';document.getElementById('nearbyPanel').style.display=tab==='nearby'?'flex':'none';const header=document.getElementById('mainHeader');if(tab==='search'){header.style.display='block';header.textContent='搜尋 - 真實ETA';doSearch();}else if(tab==='fav'){header.style.display='block';header.textContent='收藏路線';showFavs();}else if(tab==='home'){header.style.display='block';header.textContent='主頁 - 全港巴士';results.innerHTML='<div class="hint">主頁<br>支援：九巴/龍運/城巴/嶼巴/小巴/港鐵巴士<br>試下搜 1A、962X、K73、B2</div>';}else if(tab==='nearby'){header.style.display='none';if(!userPos)locateNearby();else renderNearbyStops();}}
+function showFavs(){if(favs.length===0){results.innerHTML='<div class="hint">未有收藏<br>去搜尋按 ☆</div>';return;}const list=allMerged.filter(r=>favs.includes(r.no));renderList(list);}
+function locateNearby(){switchTab('nearby');document.getElementById('stationBar').textContent='定位中...';document.getElementById('nearbyList').innerHTML='<div class="hint">📍 正在定位...</div>';if(!navigator.geolocation){document.getElementById('nearbyList').innerHTML='<div class="hint">不支援GPS</div>';return;}navigator.geolocation.getCurrentPosition(pos=>{userPos={lat:pos.coords.latitude,lon:pos.coords.longitude};renderNearbyStops();},err=>{document.getElementById('nearbyList').innerHTML='<div class="hint">定位失敗: '+err.message+'</div>';},{enableHighAccuracy:true,timeout:10000});}
+function renderNearbyStops(){allStops.forEach(s=>s.dist=hav(userPos.lat,userPos.lon,s.lat,s.long));allStops.sort((a,b)=>a.dist-b.dist);const nearest=allStops.slice(0,12);const scroll=document.getElementById('stopsScroll');scroll.innerHTML='';nearest.forEach((s,i)=>{const btn=document.createElement('button');btn.className='stop-btn'+(i===0?' active':'');btn.innerHTML=`${s.id.slice(0,2).toUpperCase()}<br><small>${s.id.slice(2,6)||''}</small>`;btn.title=s.name;btn.onclick=()=>selectStop(s,btn);scroll.appendChild(btn);});if(nearest[0])selectStop(nearest[0],scroll.firstChild);}
+async function selectStop(stop,btnEl){document.querySelectorAll('.stop-btn').forEach(b=>b.classList.remove('active'));if(btnEl)btnEl.classList.add('active');document.getElementById('stationBar').textContent=`${stop.name} (${stop.id})`;document.getElementById('walkBadge').innerHTML=`🚶<br>${Math.round(stop.dist)}米`;const list=document.getElementById('nearbyList');list.innerHTML='<div class="hint">載入 '+stop.name+' 真實ETA...</div>';try{let etas=[];if(stop.type==='KMB'){const res=await fetch(KMB_STOP_ETA+stop.id).then(r=>r.json());etas=res.data||[];}else{const res=await fetch(CTB_ETA_ALL+stop.id).then(r=>r.json());etas=(res.data||[]).map(x=>({route:x.route,dest_tc:x.dest_tc,eta:x.eta,rmk_tc:x.rmk_tc,co:'CTB'}));}if(etas.length===0){list.innerHTML='<div class="hint">此站暫無班次</div>';return;}etas.sort((a,b)=>new Date(a.eta)-new Date(b.eta));let html='';etas.forEach(e=>{const mins=fmtShort(e.eta);const isSoon=mins==='即將'||parseInt(mins)<=2;html+=`<div class="route-row ${!e.eta?'dim':''}"><div class="route-no" style="min-width:52px">${e.route}</div><div style="flex:1"><div style="font-size:14px">往 ${e.dest_tc||''}</div><div style="font-size:10px;color:#888">${e.co||''}</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${isSoon?'#d81e26':'#00a0e9'}">${e.eta?mins+'<span style=\"font-size:12px\"> 分鐘</span>':'終點站'}</div><div style="font-size:10px;color:#888">${e.route.startsWith('A')||e.route.startsWith('E')?'龍運':e.co==='CTB'?'城巴':'九巴'}</div></div></div>`;});list.innerHTML=html;}catch(err){list.innerHTML='<div class="hint">載入失敗</div>';}}
+async function openRoute(r){document.getElementById('sheetTitle').textContent=`${r.no} ${r.coName} ${r.orig?r.orig+'→'+r.dest:''}`;const lst=document.getElementById('stopList');lst.innerHTML='<div style="padding:20px;text-align:center;color:#888">載入真實站表及ETA中...</div>';document.getElementById('modal').classList.add('show');try{if(r.type==='KMB'){const rs=await fetch(KMB_ROUTE_STOP+`${r.no}/outbound/1`).then(x=>x.json());const stops=rs.data||[];let h='';for(let i=0;i<Math.min(stops.length,18);i++){const s=stops[i];const sd=await fetch(KMB_STOP+s.stop).then(x=>x.json()).catch(()=>null);const name=sd?.data?.name_tc||s.stop;const er=await fetch(KMB_ETA+`${s.stop}/${r.no}/1`).then(x=>x.json()).catch(()=>({data:[]}));const etas=(er.data||[]).slice(0,2).map(e=>fmt(e.eta,e.rmk_tc)).join(' / ')||'暫無';h+=`<div class="stop"><div style="flex:1">${i+1}. ${name}</div><div style="font-weight:700">${etas}</div></div>`;}lst.innerHTML=h;}else if(r.type==='CTB'){const rs=await fetch(CTB_ROUTE_STOP+`${r.no}/outbound`).then(x=>x.json());const stops=rs.data||[];let h='';for(let i=0;i<Math.min(stops.length,18);i++){const s=stops[i];const sd=await fetch(CTB_STOP+s.stop).then(x=>x.json()).catch(()=>null);const name=sd?.data?.name_tc||s.stop;const er=await fetch(CTB_ETA+`${s.stop}/${r.no}`).then(x=>x.json()).catch(()=>({data:[]}));const etas=(er.data||[]).slice(0,2).map(e=>fmt(e.eta)).join(' / ')||'暫無';h+=`<div class="stop"><div style="flex:1">${i+1}. ${name}</div><div style="font-weight:700">${etas}</div></div>`;}lst.innerHTML=h;}else{lst.innerHTML='<div class="hint">此路線暫只支援卡片及附近站ETA</div>';}}catch(e){lst.innerHTML='載入失敗';}}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+function tick(){const c=document.getElementById('clock');if(c)c.textContent=new Date().toLocaleTimeString('zh-HK',{hour:'2-digit',minute:'2-digit'})+' 🚌';}
+setInterval(tick,60000);tick();buildKbd();init();
+</script>
 </body>
 </html>
